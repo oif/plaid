@@ -78,15 +78,11 @@ jobs:
           
       - name: Setup Sparkle
         run: |
-          SPARKLE_PATH=$(find ~/Library/Developer/Xcode/DerivedData -name "sparkle" -type d -path "*/artifacts/*" | head -1)
-          if [ -z "$SPARKLE_PATH" ]; then
-            # Download Sparkle directly
-            curl -L -o /tmp/Sparkle.tar.xz https://github.com/sparkle-project/Sparkle/releases/latest/download/Sparkle-2.6.4.tar.xz
-            mkdir -p /tmp/Sparkle
-            tar -xf /tmp/Sparkle.tar.xz -C /tmp/Sparkle
-            SPARKLE_PATH="/tmp/Sparkle"
-          fi
-          echo "SPARKLE_BIN=$SPARKLE_PATH/bin" >> $GITHUB_ENV
+          SPARKLE_URL=$(curl -s https://api.github.com/repos/sparkle-project/Sparkle/releases/latest | grep "browser_download_url.*tar.xz" | cut -d '"' -f 4)
+          curl -L -o /tmp/Sparkle.tar.xz "$SPARKLE_URL"
+          mkdir -p /tmp/Sparkle
+          tar -xf /tmp/Sparkle.tar.xz -C /tmp/Sparkle
+          echo "SPARKLE_BIN=/tmp/Sparkle/bin" >> $GITHUB_ENV
           
       - name: Sign update with Sparkle
         env:
