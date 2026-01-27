@@ -60,8 +60,6 @@ class AppState: ObservableObject {
     @Published var recordingStartTime: Date?
     @Published var selectedMainTab: MainTab = .home
     
-    let sttService = STTService()
-    let llmService = LLMService()
     let appContext = AppContextService()
     let textInjector = TextInjector()
     var settings = AppSettings.shared
@@ -73,7 +71,6 @@ class AppState: ObservableObject {
     }
     
     func initialize() async {
-        debugLog("initialize() start")
         statusMessage = "Initializing..."
         
         if !appContext.hasAccessibilityPermission {
@@ -81,9 +78,7 @@ class AppState: ObservableObject {
         }
         
         do {
-            debugLog("sttService.initialize() start")
-            try await sttService.initialize()
-            debugLog("sttService.initialize() done")
+            try await SpeechService.shared.initialize()
             
             if settings.sttProvider == .sherpaLocal {
                 statusMessage = "Loading model..."
@@ -94,21 +89,18 @@ class AppState: ObservableObject {
             
             statusMessage = "Ready"
         } catch {
-            debugLog("ERROR: \(error.localizedDescription)")
             statusMessage = "Error: \(error.localizedDescription)"
         }
     }
     
     private func setupTranscriptionPill() {
-        debugLog("setupTranscriptionPill called")
         let pillController = TranscriptionPillController.shared
-        pillController.configure(sttService: sttService, llmService: llmService, textInjector: textInjector, appContextService: appContext)
+        pillController.configure(textInjector: textInjector)
         
         GlobalHotkeyManager.shared.onHotkeyPressed = {
             pillController.toggle()
         }
         GlobalHotkeyManager.shared.start()
-        debugLog("GlobalHotkeyManager started")
     }
     
     private func debugLog(_ msg: String) {
@@ -153,7 +145,7 @@ class AppState: ObservableObject {
         appContext.updateCurrentApp()
         
         do {
-            try await sttService.startListening { [weak self] partial in
+            try await SpeechService.shared.startListening { [weak self] partial in
                 Task { @MainActor in
                     self?.transcribedText = partial
                 }
@@ -174,30 +166,16 @@ class AppState: ObservableObject {
         }
         
         isRecording = false
-        statusMessage = "Transcribing..."
+        statusMessage = "Processing..."
         isProcessing = true
         
         do {
-            let sttStart = Date()
-            let result = try await sttService.stopListening()
-            timing.sttDuration = Date().timeIntervalSince(sttStart)
+            let result = try await SpeechService.shared.stopListening()
             
-            transcribedText = result
-            
-            if settings.enableLLMCorrection && !settings.effectiveLLMApiKey.isEmpty {
-                statusMessage = "Correcting with AI..."
-                let llmStart = Date()
-                let context = appContext.getCurrentContext()
-                correctedText = try await llmService.correctText(result, context: context) { [weak self] partial in
-                    Task { @MainActor in
-                        self?.correctedText = partial
-                    }
-                }
-                timing.llmDuration = Date().timeIntervalSince(llmStart)
-            } else {
-                correctedText = result
-                timing.llmDuration = 0
-            }
+            transcribedText = result.originalText
+            correctedText = result.finalText
+            timing.sttDuration = result.sttDuration
+            timing.llmDuration = result.llmDuration ?? 0
             
             if settings.autoInject && !correctedText.isEmpty {
                 statusMessage = "Typing..."
@@ -238,26 +216,12 @@ class AppState: ObservableObject {
         correctedText = ""
         
         do {
-            let sttStart = Date()
-            let result = try await sttService.transcribeFile(at: url)
-            timing.sttDuration = Date().timeIntervalSince(sttStart)
+            let result = try await SpeechService.shared.transcribeFile(at: url)
             
-            transcribedText = result
-            
-            if settings.enableLLMCorrection && !settings.effectiveLLMApiKey.isEmpty {
-                statusMessage = "Correcting with AI..."
-                let llmStart = Date()
-                let context = appContext.getCurrentContext()
-                correctedText = try await llmService.correctText(result, context: context) { [weak self] partial in
-                    Task { @MainActor in
-                        self?.correctedText = partial
-                    }
-                }
-                timing.llmDuration = Date().timeIntervalSince(llmStart)
-            } else {
-                correctedText = result
-                timing.llmDuration = 0
-            }
+            transcribedText = result.originalText
+            correctedText = result.finalText
+            timing.sttDuration = result.sttDuration
+            timing.llmDuration = result.llmDuration ?? 0
             
             timing.totalDuration = Date().timeIntervalSince(totalStart)
             statusMessage = "Done"
@@ -284,7 +248,7 @@ struct MenuBarView: View {
                     .font(.headline)
                 Spacer()
                 if appState.isRecording {
-                    CompactWaveformView(level: appState.sttService.audioLevel)
+                    CompactWaveformView(level: SpeechService.shared.audioLevel)
                         .tint(.red)
                 } else {
                     Circle()

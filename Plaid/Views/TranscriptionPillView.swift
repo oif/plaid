@@ -3,27 +3,9 @@ import SwiftUI
 struct TranscriptionPillView: View {
     @ObservedObject var pillState: TranscriptionPillState
     
-    private var pillWidth: CGFloat {
-        pillState.showModeSelector ? 240 : 130
-    }
-    
     var body: some View {
-        VStack(spacing: 8) {
-            mainPill
-            
-            if pillState.showModeSelector {
-                modeSelectorView
-                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
-            }
-        }
-        .animation(.easeInOut(duration: 0.2), value: pillState.showModeSelector)
-        .animation(.easeInOut(duration: 0.2), value: pillState.isProcessing)
-        .animation(.easeInOut(duration: 0.2), value: pillState.errorMessage)
-    }
-    
-    private var mainPill: some View {
         pillContent
-            .frame(width: pillWidth, height: 40)
+            .frame(width: 130, height: 40)
             .background {
                 Capsule()
                     .fill(Color.black.opacity(0.85))
@@ -33,15 +15,13 @@ struct TranscriptionPillView: View {
                     .strokeBorder(.white.opacity(0.15), lineWidth: 0.5)
             }
             .shadow(color: .black.opacity(0.4), radius: 12, y: 4)
+            .animation(.easeInOut(duration: 0.2), value: pillState.isProcessing)
+            .animation(.easeInOut(duration: 0.2), value: pillState.errorMessage)
     }
     
     @ViewBuilder
     private var pillContent: some View {
-        if let notice = pillState.fallbackNotice {
-            Text(notice)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.white.opacity(0.9))
-        } else if let error = pillState.errorMessage {
+        if let error = pillState.errorMessage {
             HStack(spacing: 8) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(.system(size: 12))
@@ -58,7 +38,7 @@ struct TranscriptionPillView: View {
                     .controlSize(.small)
                     .tint(.white)
                 
-                Text("Thinking...")
+                Text("Processing")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(.white.opacity(0.8))
             }
@@ -69,15 +49,10 @@ struct TranscriptionPillView: View {
     
     private var recordingContent: some View {
         HStack(spacing: 0) {
-            Button {
-                pillState.toggleModeSelector()
-            } label: {
-                Text(pillState.currentMode.icon)
-                    .font(.system(size: 14))
-                    .frame(width: 28, height: 28)
-            }
-            .buttonStyle(.plain)
-            .background(Circle().fill(.white.opacity(pillState.showModeSelector ? 0.25 : 0.15)))
+            Circle()
+                .fill(.red)
+                .frame(width: 8, height: 8)
+                .padding(.leading, 14)
             
             Spacer()
             
@@ -95,8 +70,8 @@ struct TranscriptionPillView: View {
             }
             .buttonStyle(.plain)
             .background(Circle().fill(.white.opacity(0.15)))
+            .padding(.trailing, 8)
         }
-        .padding(.horizontal, 10)
     }
     
     private var waveformIndicator: some View {
@@ -121,76 +96,6 @@ struct TranscriptionPillView: View {
         let minHeight: CGFloat = 4
         let maxHeight: CGFloat = 24
         return minHeight + effectiveLevel * falloff * (maxHeight - minHeight)
-    }
-    
-    private var modeSelectorView: some View {
-        VStack(spacing: 4) {
-            ForEach(AppSettings.shared.allModes) { mode in
-                ModeRowView(
-                    mode: mode,
-                    isSelected: pillState.currentMode.id == mode.id,
-                    isAvailable: pillState.isModeAvailable(mode)
-                ) {
-                    if pillState.isModeAvailable(mode) {
-                        pillState.selectMode(mode)
-                    }
-                }
-            }
-        }
-        .padding(8)
-        .background {
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.black.opacity(0.85))
-        }
-        .overlay {
-            RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(.white.opacity(0.15), lineWidth: 0.5)
-        }
-        .shadow(color: .black.opacity(0.3), radius: 8, y: 2)
-    }
-}
-
-private struct ModeRowView: View {
-    let mode: Mode
-    let isSelected: Bool
-    let isAvailable: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 10) {
-                Text(mode.icon)
-                    .font(.system(size: 16))
-                
-                Text(mode.name)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(isAvailable ? .white : .white.opacity(0.4))
-                
-                Spacer()
-                
-                if isSelected {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(.white)
-                }
-                
-                if !isAvailable {
-                    Text("需选中文本")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.white.opacity(0.4))
-                }
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .background {
-                if isSelected {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(.white.opacity(0.15))
-                }
-            }
-        }
-        .buttonStyle(.plain)
-        .disabled(!isAvailable)
     }
 }
 

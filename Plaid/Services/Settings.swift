@@ -121,32 +121,6 @@ Fix transcription errors, grammar, and punctuation. Keep the original meaning, t
         }
     }
     
-    // MARK: - Mode Settings
-    
-    @Published var customModes: [Mode] {
-        didSet {
-            if let data = try? JSONEncoder().encode(customModes) {
-                defaults.set(data, forKey: "customModes")
-            }
-        }
-    }
-    
-    @Published var lastSelectedModeId: String {
-        didSet { defaults.set(lastSelectedModeId, forKey: "lastSelectedModeId") }
-    }
-    
-    @Published var defaultModeId: String {
-        didSet { defaults.set(defaultModeId, forKey: "defaultModeId") }
-    }
-    
-    var allModes: [Mode] {
-        Mode.builtinModes + customModes
-    }
-    
-    func mode(byId id: String) -> Mode? {
-        allModes.first { $0.id == id }
-    }
-    
     // MARK: - Initialization
     
     private init() {
@@ -168,17 +142,6 @@ Fix transcription errors, grammar, and punctuation. Keep the original meaning, t
         // General
         self.autoInject = defaults.object(forKey: "autoInject") as? Bool ?? true
         self.customVocabulary = defaults.stringArray(forKey: "customVocabulary") ?? []
-        
-        // Modes
-        if let data = defaults.data(forKey: "customModes"),
-           let modes = try? JSONDecoder().decode([Mode].self, from: data) {
-            self.customModes = modes
-        } else {
-            self.customModes = []
-        }
-        let defaultMode = defaults.string(forKey: "defaultModeId") ?? "voice_transcription"
-        self.defaultModeId = defaultMode
-        self.lastSelectedModeId = defaults.string(forKey: "lastSelectedModeId") ?? defaultMode
         
         let spaceKeyCode = 49
         self.hotkeyKeyCode = defaults.object(forKey: "hotkeyKeyCode") as? Int ?? spaceKeyCode

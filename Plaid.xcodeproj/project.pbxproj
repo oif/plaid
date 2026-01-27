@@ -39,7 +39,7 @@
 		B513EBF82F279600005F4669 /* SpeechDenoiserService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B513EBF72F279600005F4669 /* SpeechDenoiserService.swift */; };
 		B513EC002F27A000005F4669 /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = B513EBFF2F27A000005F4669 /* KeyboardShortcuts */; };
 		B513EC0A2F27B000005F4669 /* TranscriptionHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = B513EC0B2F27B000005F4669 /* TranscriptionHistory.swift */; };
-		D10000010000000000000001 /* Mode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000010000000000000001 /* Mode.swift */; };
+		B513EC0C2F27C000005F4669 /* SpeechService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B513EC0D2F27C000005F4669 /* SpeechService.swift */; };
 		C10000010000000000000001 /* libsherpa-onnx-c-api.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = C20000010000000000000001 /* libsherpa-onnx-c-api.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		C10000010000000000000002 /* libonnxruntime.1.20.1.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = C20000010000000000000002 /* libonnxruntime.1.20.1.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 /* End PBXBuildFile section */
@@ -81,7 +81,7 @@
 		B513EBF52F279537005F4669 /* SileroVADService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SileroVADService.swift; sourceTree = "<group>"; };
 		B513EBF72F279600005F4669 /* SpeechDenoiserService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechDenoiserService.swift; sourceTree = "<group>"; };
 		B513EC0B2F27B000005F4669 /* TranscriptionHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionHistory.swift; sourceTree = "<group>"; };
-		D20000010000000000000001 /* Mode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Mode.swift; sourceTree = "<group>"; };
+		B513EC0D2F27C000005F4669 /* SpeechService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechService.swift; sourceTree = "<group>"; };
 		C20000010000000000000001 /* libsherpa-onnx-c-api.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libsherpa-onnx-c-api.dylib"; path = "Frameworks/sherpa-onnx/lib/libsherpa-onnx-c-api.dylib"; sourceTree = "<group>"; };
 		C20000010000000000000002 /* libonnxruntime.1.20.1.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libonnxruntime.1.20.1.dylib"; path = "Frameworks/sherpa-onnx/lib/libonnxruntime.1.20.1.dylib"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -152,7 +152,7 @@
 				B513EBEE2F27920F005F4669 /* TranscriptionPillController.swift */,
 				B513EBEF2F27920F005F4669 /* TranscriptionPillState.swift */,
 				B513EC0B2F27B000005F4669 /* TranscriptionHistory.swift */,
-				D20000010000000000000001 /* Mode.swift */,
+				B513EC0D2F27C000005F4669 /* SpeechService.swift */,
 				A40000010000000000000008 /* Audio */,
 				A40000010000000000000007 /* Voice */,
 				A20000010000000000000005 /* STTService.swift */,
@@ -320,7 +320,7 @@
 				A10000010000000000000017 /* ModelManager.swift in Sources */,
 				A10000010000000000000018 /* SherpaOnnxService.swift in Sources */,
 				B513EC0A2F27B000005F4669 /* TranscriptionHistory.swift in Sources */,
-				D10000010000000000000001 /* Mode.swift in Sources */,
+				B513EC0C2F27C000005F4669 /* SpeechService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

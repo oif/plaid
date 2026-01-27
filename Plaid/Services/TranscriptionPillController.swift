@@ -18,8 +18,6 @@ class TransparentHostingView<Content: View>: NSHostingView<Content> {
     override var isOpaque: Bool { false }
 }
 
-
-
 @MainActor
 class TranscriptionPillController {
     static let shared = TranscriptionPillController()
@@ -27,16 +25,17 @@ class TranscriptionPillController {
     private var panel: NSPanel?
     private var isShowing = false
     let pillState = TranscriptionPillState()
+    private var textInjector: TextInjector?
     
     private init() {
         setupPanel()
     }
     
-    func configure(sttService: STTService, llmService: LLMService, textInjector: TextInjector, appContextService: AppContextService) {
-        pillState.configure(sttService: sttService, llmService: llmService, appContextService: appContextService)
+    func configure(textInjector: TextInjector) {
+        self.textInjector = textInjector
         
         pillState.onComplete = { [weak self] text in
-            textInjector.inject(text)
+            self?.textInjector?.inject(text)
             self?.hide()
         }
         
@@ -79,24 +78,7 @@ class TranscriptionPillController {
         self.panel = panel
     }
     
-    private func log(_ msg: String) {
-        let str = "\(Date()): [Pill] \(msg)\n"
-        let url = URL(fileURLWithPath: "/Users/neo/Desktop/thyper_debug.log")
-        if let data = str.data(using: .utf8) {
-            if FileManager.default.fileExists(atPath: url.path) {
-                if let handle = try? FileHandle(forWritingTo: url) {
-                    handle.seekToEndOfFile()
-                    handle.write(data)
-                    try? handle.close()
-                }
-            } else {
-                try? data.write(to: url)
-            }
-        }
-    }
-    
     func toggle() {
-        log("toggle() isShowing=\(isShowing)")
         if isShowing {
             pillState.toggle()
         } else {
@@ -105,11 +87,7 @@ class TranscriptionPillController {
     }
     
     func show() {
-        log("show() isShowing=\(isShowing)")
-        guard !isShowing else {
-            log("Already showing, skip")
-            return
-        }
+        guard !isShowing else { return }
         guard let panel = panel else { return }
         
         let screen = activeScreen()

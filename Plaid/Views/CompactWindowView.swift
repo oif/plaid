@@ -30,7 +30,7 @@ struct CompactWindowView: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
                     if appState.isRecording {
-                        CompactWaveformView(level: appState.sttService.audioLevel)
+                        CompactWaveformView(level: SpeechService.shared.audioLevel)
                             .tint(.red)
                     }
                     
