@@ -38,6 +38,7 @@
 		B513EBF62F279537005F4669 /* SileroVADService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B513EBF52F279537005F4669 /* SileroVADService.swift */; };
 		B513EBF82F279600005F4669 /* SpeechDenoiserService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B513EBF72F279600005F4669 /* SpeechDenoiserService.swift */; };
 		B513EC002F27A000005F4669 /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = B513EBFF2F27A000005F4669 /* KeyboardShortcuts */; };
+		B513EC0A2F27B000005F4669 /* TranscriptionHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = B513EC0B2F27B000005F4669 /* TranscriptionHistory.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -76,6 +77,7 @@
 		B513EBF32F27921B005F4669 /* TranscriptionPillView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionPillView.swift; sourceTree = "<group>"; };
 		B513EBF52F279537005F4669 /* SileroVADService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SileroVADService.swift; sourceTree = "<group>"; };
 		B513EBF72F279600005F4669 /* SpeechDenoiserService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechDenoiserService.swift; sourceTree = "<group>"; };
+		B513EC0B2F27B000005F4669 /* TranscriptionHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionHistory.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -128,6 +130,7 @@
 				B513EBED2F27920F005F4669 /* GlobalHotkeyManager.swift */,
 				B513EBEE2F27920F005F4669 /* TranscriptionPillController.swift */,
 				B513EBEF2F27920F005F4669 /* TranscriptionPillState.swift */,
+				B513EC0B2F27B000005F4669 /* TranscriptionHistory.swift */,
 				A40000010000000000000008 /* Audio */,
 				A40000010000000000000007 /* Voice */,
 				A20000010000000000000005 /* STTService.swift */,
@@ -291,6 +294,7 @@
 				A10000010000000000000014 /* RecordedWaveformView.swift in Sources */,
 				A10000010000000000000017 /* ModelManager.swift in Sources */,
 				A10000010000000000000018 /* SherpaOnnxService.swift in Sources */,
+				B513EC0A2F27B000005F4669 /* TranscriptionHistory.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

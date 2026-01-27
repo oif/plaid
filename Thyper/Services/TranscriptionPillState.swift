@@ -123,15 +123,26 @@ class TranscriptionPillState: ObservableObject {
                 }
                 
                 let settings = AppSettings.shared
+                let originalText = text
+                var llmElapsed: Double? = nil
+                
                 if settings.enableLLMCorrection && !settings.effectiveLLMApiKey.isEmpty,
                    let llmService = llmService {
                     log("complete() awaiting LLM correction...")
                     let llmStart = Date()
                     let context = AppContext(appName: nil, bundleId: nil, focusedElement: nil)
                     text = try await llmService.correctText(text, context: context)
-                    let llmElapsed = Date().timeIntervalSince(llmStart)
-                    log("complete() LLM returned in \(String(format: "%.2f", llmElapsed))s: '\(text)'")
+                    llmElapsed = Date().timeIntervalSince(llmStart)
+                    log("complete() LLM returned in \(String(format: "%.2f", llmElapsed!))s: '\(text)'")
                 }
+                
+                TranscriptionHistoryService.shared.addRecord(
+                    originalText: originalText,
+                    correctedText: llmElapsed != nil ? text : nil,
+                    sttProvider: settings.sttProvider.rawValue,
+                    sttDuration: sttElapsed,
+                    llmDuration: llmElapsed
+                )
                 
                 hide()
                 log("complete() calling onComplete")

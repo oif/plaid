@@ -3,475 +3,355 @@ import UniformTypeIdentifiers
 
 struct ContentView: View {
     @EnvironmentObject var appState: AppState
-    @State private var isHovering = false
-    @State private var currentTime = Date()
+    @StateObject private var historyService = TranscriptionHistoryService.shared
+    @State private var selectedRecord: TranscriptionRecord?
     @State private var showFileImporter = false
-    @Namespace private var glassNamespace
+    @State private var searchText = ""
     
-    let timer = Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()
+    var filteredRecords: [TranscriptionRecord] {
+        if searchText.isEmpty {
+            return historyService.recentRecords
+        }
+        return historyService.recentRecords.filter {
+            $0.displayText.localizedCaseInsensitiveContains(searchText)
+        }
+    }
     
     var body: some View {
-        ZStack {
-            backgroundGradient
-            
-            VStack(spacing: 0) {
-                headerView
-                    .padding(.top, 12)
-                
-                transcriptionArea
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 16)
-                
-                Spacer()
-                
-                controlBar
-                    .padding(.bottom, 24)
-            }
+        NavigationSplitView {
+            sidebarView
+        } detail: {
+            detailView
         }
-        .frame(minWidth: 520, minHeight: 420)
-        .onReceive(timer) { time in
-            if appState.isRecording {
-                currentTime = time
+        .frame(minWidth: 700, minHeight: 500)
+        .searchable(text: $searchText, prompt: "Search transcriptions...")
+        .fileImporter(
+            isPresented: $showFileImporter,
+            allowedContentTypes: [.wav, .audio],
+            allowsMultipleSelection: false
+        ) { result in
+            if case .success(let urls) = result, let url = urls.first {
+                Task { await appState.processAudioFile(at: url) }
             }
         }
     }
     
-    private var backgroundGradient: some View {
-        LinearGradient(
-            colors: [
-                Color(nsColor: .windowBackgroundColor),
-                Color(nsColor: .windowBackgroundColor).opacity(0.95)
-            ],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-        .ignoresSafeArea()
-    }
-    
-    private var headerView: some View {
-        HStack(spacing: 14) {
-            Image(systemName: "waveform.circle.fill")
-                .font(.system(size: 36))
-                .foregroundStyle(.tint)
-                .symbolEffect(.pulse, isActive: appState.isRecording)
+    private var sidebarView: some View {
+        VStack(spacing: 0) {
+            statsHeader
             
-            VStack(alignment: .leading, spacing: 3) {
-                Text("Thyper")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                
-                Text("AI Voice Dictation")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+            Divider()
             
-            Spacer()
-            
-            statusIndicator
-        }
-        .padding(.horizontal, 24)
-    }
-    
-    private var statusIndicator: some View {
-        HStack(spacing: 8) {
-            if appState.isRecording {
-                TimelineView(.animation(minimumInterval: 1/30)) { _ in
-                    AudioWaveformView(level: appState.sttService.audioLevel, samples: appState.sttService.waveformSamples, barCount: 10, spacing: 1, cornerRadius: 0.5)
-                        .frame(width: 30, height: 28)
-                        .tint(.red)
-                }
+            if filteredRecords.isEmpty {
+                emptyStateView
             } else {
-                Circle()
-                    .fill(statusColor)
-                    .frame(width: 8, height: 8)
-                    .shadow(color: statusColor.opacity(0.6), radius: 4)
+                recordsList
             }
-            
-            Text(appState.statusMessage)
-                .font(.caption)
+        }
+        .frame(minWidth: 280)
+        .toolbar {
+            ToolbarItemGroup(placement: .primaryAction) {
+                Button {
+                    showFileImporter = true
+                } label: {
+                    Label("Import Audio", systemImage: "doc.badge.plus")
+                }
+                .keyboardShortcut("o", modifiers: .command)
+                
+                Button {
+                    Task { await appState.toggleRecording() }
+                } label: {
+                    Label(
+                        appState.isRecording ? "Stop" : "Record",
+                        systemImage: appState.isRecording ? "stop.fill" : "mic.fill"
+                    )
+                }
+                .tint(appState.isRecording ? .red : .accentColor)
+                .keyboardShortcut("r", modifiers: .command)
+            }
+        }
+    }
+    
+    private var statsHeader: some View {
+        HStack(spacing: 16) {
+            statItem(value: "\(historyService.todayCount)", label: "Today")
+            statItem(value: "\(historyService.recentRecords.count)", label: "Total")
+            statItem(value: formatCharCount(historyService.totalCharacters), label: "Characters")
+        }
+        .padding()
+        .background(.ultraThinMaterial)
+    }
+    
+    private func statItem(value: String, label: String) -> some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(.title3)
+                .fontWeight(.semibold)
+                .monospacedDigit()
+            Text(label)
+                .font(.caption2)
                 .foregroundStyle(.secondary)
         }
-        .frame(height: appState.isRecording ? 28 : nil)
-        .padding(.horizontal, 12)
-        .padding(.vertical, appState.isRecording ? 4 : 8)
-        .glassEffect(
-            .regular
-                .tint(statusColor.opacity(0.15))
-                .interactive(),
-            in: .capsule
-        )
-        .glassEffectID("statusIndicator", in: glassNamespace)
+        .frame(maxWidth: .infinity)
     }
     
-    private var statusColor: Color {
-        if appState.isRecording {
-            return .red
-        } else if appState.isProcessing {
-            return .orange
-        } else {
-            return .green
+    private func formatCharCount(_ count: Int) -> String {
+        if count >= 10000 {
+            return String(format: "%.1fK", Double(count) / 1000)
         }
-    }
-    
-    private var transcriptionArea: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                if appState.transcribedText.isEmpty && appState.correctedText.isEmpty && !appState.isRecording {
-                    emptyStateView
-                } else {
-                    if !appState.transcribedText.isEmpty {
-                        transcriptionCard(
-                            title: "Original",
-                            text: appState.transcribedText,
-                            icon: "text.quote",
-                            tintColor: .secondary
-                        )
-                    }
-                    
-                    if !appState.correctedText.isEmpty && appState.correctedText != appState.transcribedText {
-                        transcriptionCard(
-                            title: "Corrected",
-                            text: appState.correctedText,
-                            icon: "sparkles",
-                            tintColor: .green,
-                            isStreaming: appState.isProcessing && appState.settings.enableLLMCorrection
-                        )
-                    }
-                    
-                    if appState.timing.totalDuration > 0 {
-                        timingStatsView
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity)
-        }
-        .frame(maxHeight: .infinity)
-    }
-    
-    private var liveWaveformCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                if appState.isRecording {
-                    Circle()
-                        .fill(.red)
-                        .frame(width: 8, height: 8)
-                        .shadow(color: .red.opacity(0.6), radius: 4)
-                    Text("Recording")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundStyle(.red)
-                } else {
-                    Image(systemName: "waveform")
-                        .foregroundStyle(.blue)
-                    Text("Audio")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundStyle(.blue)
-                }
-                Spacer()
-                if appState.isRecording {
-                    Text(recordingDurationText)
-                        .font(.caption)
-                        .monospacedDigit()
-                        .foregroundStyle(.secondary)
-                } else {
-                    Text("\(appState.timing.formattedRecording)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            
-            RecordedWaveformView(
-                samples: appState.sttService.waveformSamples,
-                barWidth: 2,
-                barSpacing: 1,
-                color: appState.isRecording ? .red : .blue
-            )
-            .frame(height: 40)
-        }
-        .padding(14)
-        .glassEffect(
-            .regular.tint((appState.isRecording ? Color.red : Color.blue).opacity(0.1)),
-            in: .rect(cornerRadius: 14)
-        )
-        .glassEffectID("waveformCard", in: glassNamespace)
-        .animation(.easeInOut(duration: 0.2), value: appState.isRecording)
-    }
-    
-    private var recordingDurationText: String {
-        let duration = currentTime.timeIntervalSince(appState.recordingStartTime ?? currentTime)
-        return String(format: "%.1fs", duration)
-    }
-    
-    private var timingStatsView: some View {
-        HStack(spacing: 16) {
-            timingItem(icon: "mic.fill", label: "Recording", value: appState.timing.formattedRecording, color: .red)
-            timingItem(icon: "waveform", label: "STT", value: appState.timing.formattedSTT, color: .blue)
-            if appState.timing.llmDuration > 0 {
-                timingItem(icon: "sparkles", label: "LLM", value: appState.timing.formattedLLM, color: .purple)
-            }
-            if appState.timing.injectDuration > 0 {
-                timingItem(icon: "keyboard", label: "Inject", value: appState.timing.formattedInject, color: .orange)
-            }
-            
-            Spacer()
-            
-            HStack(spacing: 6) {
-                Image(systemName: "clock")
-                    .foregroundStyle(.secondary)
-                Text("Total: \(appState.timing.formattedTotal)")
-                    .fontWeight(.medium)
-            }
-            .font(.caption)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .glassEffect(
-                .regular.tint(.cyan.opacity(0.2)),
-                in: .capsule
-            )
-        }
-        .padding(14)
-        .glassEffect(
-            .regular.tint(.cyan.opacity(0.08)),
-            in: .rect(cornerRadius: 14)
-        )
-        .glassEffectID("timingStats", in: glassNamespace)
-    }
-    
-    private func timingItem(icon: String, label: String, value: String, color: Color) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.caption2)
-                .foregroundStyle(color)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(label)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                Text(value)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .monospacedDigit()
-            }
-        }
+        return "\(count)"
     }
     
     private var emptyStateView: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 16) {
             Spacer()
             
-            if appState.isRecording {
-                VStack(spacing: 20) {
-                    AudioWaveformView(level: appState.sttService.audioLevel, barCount: 7, spacing: 6, cornerRadius: 3)
-                        .frame(width: 120, height: 60)
-                        .tint(.red)
-                    
-                    VStack(spacing: 10) {
-                        Text("Listening...")
-                            .font(.title3)
-                            .fontWeight(.medium)
-                        
-                        Text("Click stop or press ⌘R when done")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .padding(32)
-                .glassEffect(
-                    .regular.tint(.red.opacity(0.1)),
-                    in: .rect(cornerRadius: 24)
-                )
-                .glassEffectID("emptyState", in: glassNamespace)
-            } else {
-                VStack(spacing: 20) {
-                    Image(systemName: "mic.badge.plus")
-                        .font(.system(size: 64, weight: .light))
-                        .foregroundStyle(.secondary.opacity(0.6))
-                    
-                    VStack(spacing: 10) {
-                        Text("Ready to Dictate")
-                            .font(.title3)
-                            .fontWeight(.medium)
-                        
-                        Text("Click the record button or press ⌘R to start")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .padding(32)
-                .glassEffect(
-                    .regular.tint(.accentColor.opacity(0.05)),
-                    in: .rect(cornerRadius: 24)
-                )
-                .glassEffectID("emptyState", in: glassNamespace)
-            }
+            Image(systemName: "text.bubble")
+                .font(.system(size: 48))
+                .foregroundStyle(.secondary.opacity(0.5))
+            
+            Text("No Transcriptions Yet")
+                .font(.headline)
+                .foregroundStyle(.secondary)
+            
+            Text("Press fn + Space anywhere\nto start voice input")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
             
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
-    private func transcriptionCard(title: String, text: String, icon: String, tintColor: Color, isStreaming: Bool = false) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .foregroundStyle(tintColor)
-                
-                Text(title)
+    private var recordsList: some View {
+        List(selection: $selectedRecord) {
+            ForEach(filteredRecords) { record in
+                RecordRow(record: record)
+                    .tag(record)
+                    .contextMenu {
+                        Button {
+                            copyToClipboard(record.displayText)
+                        } label: {
+                            Label("Copy", systemImage: "doc.on.doc")
+                        }
+                        
+                        Divider()
+                        
+                        Button(role: .destructive) {
+                            historyService.deleteRecord(record)
+                            if selectedRecord?.id == record.id {
+                                selectedRecord = nil
+                            }
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
+            }
+        }
+        .listStyle(.sidebar)
+    }
+    
+    @ViewBuilder
+    private var detailView: some View {
+        if let record = selectedRecord {
+            RecordDetailView(record: record)
+        } else {
+            placeholderView
+        }
+    }
+    
+    private var placeholderView: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "waveform.circle")
+                .font(.system(size: 64))
+                .foregroundStyle(.secondary.opacity(0.4))
+            
+            Text("Select a transcription")
+                .font(.title3)
+                .foregroundStyle(.secondary)
+            
+            VStack(spacing: 8) {
+                Label("fn + Space", systemImage: "globe")
+                Text("Quick voice input anywhere")
                     .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundStyle(tintColor)
+                    .foregroundStyle(.tertiary)
+            }
+            .padding()
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+    
+    private func copyToClipboard(_ text: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+    }
+}
+
+struct RecordRow: View {
+    let record: TranscriptionRecord
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(record.displayText)
+                .lineLimit(2)
+                .font(.body)
+            
+            HStack(spacing: 8) {
+                Text(record.formattedTimestamp)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
                 
-                if isStreaming {
-                    ProgressView()
-                        .controlSize(.mini)
+                Text("•")
+                    .foregroundStyle(.quaternary)
+                
+                Text(record.formattedDuration)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                
+                if record.correctedText != nil {
+                    Image(systemName: "sparkles")
+                        .font(.caption2)
+                        .foregroundStyle(.purple)
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+struct RecordDetailView: View {
+    let record: TranscriptionRecord
+    
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                headerSection
+                
+                if let corrected = record.correctedText, corrected != record.originalText {
+                    textSection(title: "Corrected", text: corrected, icon: "sparkles", color: .purple)
+                    textSection(title: "Original", text: record.originalText, icon: "text.quote", color: .secondary)
+                } else {
+                    textSection(title: "Transcription", text: record.originalText, icon: "text.quote", color: .blue)
                 }
                 
-                Spacer()
-                
+                metadataSection
+            }
+            .padding(24)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(Color(nsColor: .windowBackgroundColor))
+        .toolbar {
+            ToolbarItemGroup(placement: .primaryAction) {
                 Button {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(text, forType: .string)
+                    copyToClipboard(record.displayText)
+                } label: {
+                    Label("Copy", systemImage: "doc.on.doc")
+                }
+                .keyboardShortcut("c", modifiers: [.command, .shift])
+            }
+        }
+    }
+    
+    private var headerSection: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(record.timestamp, style: .date)
+                    .font(.headline)
+                Text(record.timestamp, style: .time)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            
+            Spacer()
+            
+            HStack(spacing: 12) {
+                statBadge(value: "\(record.characterCount)", label: "chars")
+                statBadge(value: record.formattedDuration, label: "time")
+            }
+        }
+    }
+    
+    private func statBadge(value: String, label: String) -> some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(.caption)
+                .fontWeight(.semibold)
+                .monospacedDigit()
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(.ultraThinMaterial, in: Capsule())
+    }
+    
+    private func textSection(title: String, text: String, icon: String, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .foregroundStyle(color)
+                Text(title)
+                    .fontWeight(.medium)
+                Spacer()
+                Button {
+                    copyToClipboard(text)
                 } label: {
                     Image(systemName: "doc.on.doc")
                         .font(.caption)
-                        .frame(width: 24, height: 24)
                 }
-                .buttonStyle(.glass)
-                .buttonBorderShape(.circle)
-                .controlSize(.small)
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
             }
+            .font(.caption)
             
-            if isStreaming {
-                TypewriterText(text, isStreaming: true)
-            } else {
-                Text(text)
-                    .font(.body)
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
+            Text(text)
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(16)
-        .glassEffect(
-            .regular.tint(tintColor.opacity(0.1)),
-            in: .rect(cornerRadius: 16)
-        )
+        .padding()
+        .background(color.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
     }
     
-    private var controlBar: some View {
-        GlassEffectContainer(spacing: 24) {
-            HStack(spacing: 24) {
-                recordButton
-                    .glassEffectID("recordButton", in: glassNamespace)
-                
-                importButton
-                
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(appState.isRecording ? "Recording..." : "Press to Record")
-                        .font(.headline)
-                    
-                    Text("⌘R to toggle • ⌘O to import")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+    private var metadataSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Details")
+                .font(.caption)
+                .fontWeight(.medium)
+                .foregroundStyle(.secondary)
+            
+            HStack(spacing: 16) {
+                metadataItem(icon: "waveform", label: "Provider", value: record.sttProvider)
+                metadataItem(icon: "clock", label: "STT", value: String(format: "%.2fs", record.sttDuration))
+                if let llm = record.llmDuration {
+                    metadataItem(icon: "sparkles", label: "LLM", value: String(format: "%.2fs", llm))
                 }
-                
-                Spacer()
-                
-                providerBadge
-                    .glassEffectID("providerBadge", in: glassNamespace)
-            }
-            .padding(.horizontal, 24)
-        }
-        .fileImporter(
-            isPresented: $showFileImporter,
-            allowedContentTypes: [.wav, .audio],
-            allowsMultipleSelection: false
-        ) { result in
-            switch result {
-            case .success(let urls):
-                if let url = urls.first {
-                    Task {
-                        await appState.processAudioFile(at: url)
-                    }
-                }
-            case .failure(let error):
-                print("File import error: \(error)")
             }
         }
+        .padding()
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
     }
     
-    private var importButton: some View {
-        Button {
-            showFileImporter = true
-        } label: {
-            Image(systemName: "doc.badge.plus")
-                .font(.title3)
-                .frame(width: 44, height: 44)
-        }
-        .buttonStyle(.glass)
-        .buttonBorderShape(.circle)
-        .disabled(appState.isRecording || appState.isProcessing)
-        .keyboardShortcut("o", modifiers: [.command])
-    }
-    
-    private var recordButton: some View {
-        Button {
-            Task {
-                await appState.toggleRecording()
-            }
-        } label: {
-            Image(systemName: appState.isRecording ? "stop.fill" : "mic.fill")
-                .font(.title2)
-                .frame(width: 60, height: 60)
-        }
-        .buttonStyle(.glass)
-        .buttonBorderShape(.circle)
-        .tint(appState.isRecording ? .red : .accentColor)
-        .scaleEffect(isHovering ? 1.05 : 1.0)
-        .animation(.easeInOut(duration: 0.15), value: isHovering)
-        .onHover { hovering in
-            isHovering = hovering
-        }
-        .keyboardShortcut("r", modifiers: [.command])
-    }
-    
-    private var providerBadge: some View {
-        GlassEffectContainer(spacing: 6) {
-            VStack(alignment: .trailing, spacing: 6) {
-                HStack(spacing: 6) {
-                    Image(systemName: appState.settings.sttProvider.icon)
-                        .font(.caption)
-                    Text(appState.settings.sttProvider.displayName)
-                        .font(.caption)
-                    if appState.settings.sttProvider.isLocal {
-                        Circle()
-                            .fill(.green)
-                            .frame(width: 6, height: 6)
-                    }
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .glassEffect(
-                    .regular
-                        .tint(.accentColor.opacity(0.2))
-                        .interactive(),
-                    in: .capsule
-                )
-                
-                if appState.settings.enableLLMCorrection {
-                    HStack(spacing: 5) {
-                        Image(systemName: appState.settings.llmProvider.icon)
-                        Text(appState.settings.llmProvider.displayName)
-                    }
+    private func metadataItem(icon: String, label: String, value: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(label)
                     .font(.caption2)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .glassEffect(
-                        .regular.tint(.purple.opacity(0.15)),
-                        in: .capsule
-                    )
-                }
+                    .foregroundStyle(.tertiary)
+                Text(value)
+                    .font(.caption)
             }
         }
+    }
+    
+    private func copyToClipboard(_ text: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
     }
 }
 
