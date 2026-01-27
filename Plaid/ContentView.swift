@@ -440,45 +440,68 @@ struct ContentView: View {
     }
     
     private var homeOverviewView: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                HeroTimeSavedCard(
-                    timeSaved: historyService.timeSavedMinutes,
-                    formattedTime: formatTimeSaved(historyService.timeSavedMinutes)
-                )
-                
-                SpeedComparisonCard(
-                    voiceWPM: historyService.voiceWPM,
-                    typingWPM: TranscriptionHistoryService.typingWPM,
-                    speedMultiplier: historyService.averageSpeedMultiplier,
-                    formattedSpeed: formatSpeedMultiplier(historyService.averageSpeedMultiplier)
-                )
-                
-                HStack(spacing: 12) {
-                    CompactStatCard(
-                        title: "Total Words",
-                        value: formatWordCount(historyService.totalWords),
-                        icon: "text.word.spacing",
-                        accentColor: .purple
+        GeometryReader { geometry in
+            let isWide = geometry.size.width > 700
+            
+            ScrollView {
+                VStack(spacing: 20) {
+                    if isWide {
+                        HStack(alignment: .top, spacing: 20) {
+                            HeroTimeSavedCard(
+                                timeSaved: historyService.timeSavedMinutes,
+                                formattedTime: formatTimeSaved(historyService.timeSavedMinutes)
+                            )
+                            .frame(maxWidth: .infinity)
+                            
+                            SpeedComparisonCard(
+                                voiceWPM: historyService.voiceWPM,
+                                typingWPM: TranscriptionHistoryService.typingWPM,
+                                speedMultiplier: historyService.averageSpeedMultiplier,
+                                formattedSpeed: formatSpeedMultiplier(historyService.averageSpeedMultiplier)
+                            )
+                            .frame(maxWidth: .infinity)
+                        }
+                    } else {
+                        HeroTimeSavedCard(
+                            timeSaved: historyService.timeSavedMinutes,
+                            formattedTime: formatTimeSaved(historyService.timeSavedMinutes)
+                        )
+                        
+                        SpeedComparisonCard(
+                            voiceWPM: historyService.voiceWPM,
+                            typingWPM: TranscriptionHistoryService.typingWPM,
+                            speedMultiplier: historyService.averageSpeedMultiplier,
+                            formattedSpeed: formatSpeedMultiplier(historyService.averageSpeedMultiplier)
+                        )
+                    }
+                    
+                    HStack(spacing: 16) {
+                        CompactStatCard(
+                            title: "Total Words",
+                            value: formatWordCount(historyService.totalWords),
+                            icon: "text.word.spacing",
+                            accentColor: .purple
+                        )
+                        
+                        CompactStatCard(
+                            title: "Today",
+                            value: "\(historyService.todayCount)",
+                            subtitle: historyService.todayWords > 0 ? "\(formatWordCount(historyService.todayWords)) words" : nil,
+                            icon: "sun.max.fill",
+                            accentColor: .orange
+                        )
+                    }
+                    
+                    WeeklyActivityChart(
+                        stats: historyService.weeklyStats,
+                        maxWords: historyService.maxDailyWords
                     )
                     
-                    CompactStatCard(
-                        title: "Today",
-                        value: "\(historyService.todayCount)",
-                        subtitle: historyService.todayWords > 0 ? "\(formatWordCount(historyService.todayWords)) words" : nil,
-                        icon: "sun.max.fill",
-                        accentColor: .orange
-                    )
+                    QuickStartCard()
                 }
-                
-                WeeklyActivityChart(
-                    stats: historyService.weeklyStats,
-                    maxWords: historyService.maxDailyWords
-                )
-                
-                QuickStartCard()
+                .padding(24)
+                .frame(maxWidth: .infinity)
             }
-            .padding(20)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(nsColor: .windowBackgroundColor))
@@ -556,9 +579,20 @@ struct RecordRow: View {
 struct RecordDetailView: View {
     let record: TranscriptionRecord
     
+    private var sttProviderEnum: STTProvider? {
+        STTProvider(rawValue: record.sttProvider.lowercased())
+    }
+    
     private var isLocalMode: Bool {
-        let localProviders = ["sherpa", "apple", "local"]
-        return localProviders.contains(where: { record.sttProvider.lowercased().contains($0) })
+        sttProviderEnum?.isLocal ?? false
+    }
+    
+    private var providerDisplayName: String {
+        sttProviderEnum?.displayName ?? record.sttProvider.capitalized
+    }
+    
+    private var providerIcon: String {
+        sttProviderEnum?.icon ?? "waveform"
     }
     
     private var recordWPM: Double {
@@ -712,9 +746,9 @@ struct RecordDetailView: View {
             
             VStack(spacing: 0) {
                 performanceRow(
-                    icon: "waveform",
+                    icon: providerIcon,
                     label: "Speech Recognition",
-                    value: record.sttProvider.capitalized,
+                    value: providerDisplayName,
                     timing: String(format: "%.2fs", record.sttDuration),
                     color: .orange
                 )
@@ -889,14 +923,17 @@ struct HeroTimeSavedCard: View {
             
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(heroValue)
-                    .font(.system(size: 72, weight: .bold, design: .rounded))
+                    .font(.system(size: 64, weight: .bold, design: .rounded))
                     .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
                     .foregroundStyle(.white)
                     .contentTransition(.numericText())
                 
                 Text(heroUnit)
-                    .font(.system(size: 20, weight: .medium, design: .rounded))
+                    .font(.system(size: 18, weight: .medium, design: .rounded))
                     .foregroundStyle(.white.opacity(0.7))
+                    .lineLimit(1)
                 
                 Spacer()
             }
@@ -977,7 +1014,9 @@ struct SpeedComparisonCard: View {
                 if speedMultiplier > 0 {
                     HStack(spacing: 4) {
                         Text(formattedSpeed)
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .font(.system(size: 24, weight: .bold, design: .rounded))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
                             .monospacedDigit()
                             .foregroundStyle(speedMultiplier >= 2.0 ? Color.orange : .primary)
                         Text("faster")
@@ -1021,7 +1060,7 @@ struct SpeedComparisonCard: View {
                         .font(.system(size: 12, weight: .semibold, design: .rounded))
                         .monospacedDigit()
                         .foregroundStyle(.orange)
-                        .frame(width: 36, alignment: .trailing)
+                        .frame(minWidth: 44, alignment: .trailing)
                 }
                 
                 HStack(spacing: 12) {
@@ -1051,7 +1090,7 @@ struct SpeedComparisonCard: View {
                         .font(.system(size: 12, weight: .medium, design: .rounded))
                         .monospacedDigit()
                         .foregroundStyle(.secondary)
-                        .frame(width: 36, alignment: .trailing)
+                        .frame(minWidth: 44, alignment: .trailing)
                 }
             }
             
@@ -1105,25 +1144,29 @@ struct CompactStatCard: View {
             
             VStack(alignment: .leading, spacing: 3) {
                 Text(value)
-                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
                     .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
                     .foregroundStyle(.primary)
                 
                 VStack(alignment: .leading, spacing: 1) {
                     Text(title)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
                     if let subtitle = subtitle {
                         Text(subtitle)
                             .font(.system(size: 10))
                             .foregroundStyle(.tertiary)
+                            .lineLimit(1)
                     }
                 }
             }
         }
-        .padding(14)
+        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(height: 110)
+        .frame(minHeight: 100)
         .background(.secondary.opacity(0.06), in: RoundedRectangle(cornerRadius: 14))
         .overlay(
             RoundedRectangle(cornerRadius: 14)

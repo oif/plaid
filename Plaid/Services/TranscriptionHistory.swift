@@ -34,7 +34,42 @@ final class TranscriptionRecord {
     }
     
     var wordCount: Int {
-        displayText.split(whereSeparator: { $0.isWhitespace || $0.isNewline }).count
+        let text = displayText
+        guard !text.isEmpty else { return 0 }
+        
+        var count = 0
+        var inLatinWord = false
+        
+        for scalar in text.unicodeScalars {
+            let isCJK = (scalar.value >= 0x4E00 && scalar.value <= 0x9FFF) ||
+                        (scalar.value >= 0x3400 && scalar.value <= 0x4DBF) ||
+                        (scalar.value >= 0x3000 && scalar.value <= 0x303F)
+            let isLatin = scalar.properties.isAlphabetic && !isCJK
+            let isWhitespace = scalar.properties.isWhitespace
+            
+            if isCJK {
+                if inLatinWord {
+                    count += 1
+                    inLatinWord = false
+                }
+                count += 1
+            } else if isLatin {
+                if !inLatinWord {
+                    inLatinWord = true
+                }
+            } else if isWhitespace || CharacterSet.punctuationCharacters.contains(scalar) {
+                if inLatinWord {
+                    count += 1
+                    inLatinWord = false
+                }
+            }
+        }
+        
+        if inLatinWord {
+            count += 1
+        }
+        
+        return max(count, 1)
     }
     
     var formattedTimestamp: String {
