@@ -1,7 +1,5 @@
 import Foundation
 
-// MARK: - ProcessedAudio
-
 struct ProcessedAudio: Sendable {
     let samples: [Float]
     let sampleRate: Int
@@ -18,8 +16,6 @@ struct ProcessedAudio: Sendable {
     }
 }
 
-// MARK: - AudioMetrics
-
 struct AudioMetrics: Sendable {
     let captureMs: Double
     let vadMs: Double
@@ -28,8 +24,6 @@ struct AudioMetrics: Sendable {
     
     static let zero = AudioMetrics(captureMs: 0, vadMs: 0, peakLevel: 0, avgLevel: 0)
 }
-
-// MARK: - VoiceContext
 
 struct VoiceContext: Sendable {
     let appName: String?
@@ -47,27 +41,4 @@ struct VoiceContext: Sendable {
     }
     
     static let empty = VoiceContext()
-}
-
-// MARK: - VoiceResult
-
-struct VoiceResult: Sendable {
-    let language: String?
-    let text: String
-    let rawText: String?
-    let metrics: VoiceMetrics
-}
-
-// MARK: - VoiceMetrics
-
-struct VoiceMetrics: Sendable {
-    let sttMs: Double
-    let llmMs: Double?
-    let totalMs: Double
-    
-    init(sttMs: Double, llmMs: Double? = nil, totalMs: Double? = nil) {
-        self.sttMs = sttMs
-        self.llmMs = llmMs
-        self.totalMs = totalMs ?? (sttMs + (llmMs ?? 0))
-    }
 }

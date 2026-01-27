@@ -3,8 +3,6 @@ import Foundation
 @MainActor
 class LLMService {
     
-    // MARK: - New API with explicit systemPrompt
-    
     func process(_ text: String, systemPrompt: String, onPartial: ((String) -> Void)? = nil) async throws -> String {
         let settings = AppSettings.shared
         
@@ -29,35 +27,7 @@ class LLMService {
         )
     }
     
-    // MARK: - Legacy API (for backward compatibility)
-    
-    func correctText(_ text: String, context: AppContext, onPartial: ((String) -> Void)? = nil) async throws -> String {
-        let settings = AppSettings.shared
-        
-        let apiKey = settings.effectiveLLMApiKey
-        let endpoint = settings.effectiveLLMEndpoint
-        
-        guard !apiKey.isEmpty, !endpoint.isEmpty else {
-            return text
-        }
-        
-        guard let url = URL(string: endpoint) else {
-            throw LLMError.invalidEndpoint
-        }
-        
-        let systemPrompt = buildSystemPrompt(context: context, settings: settings)
-        
-        return try await executeRequest(
-            text: text,
-            systemPrompt: systemPrompt,
-            url: url,
-            apiKey: apiKey,
-            model: settings.llmModel,
-            onPartial: onPartial
-        )
-    }
-    
-    // MARK: - Request Execution
+    // MARK: - Private
     
     private func executeRequest(
         text: String,
@@ -196,16 +166,6 @@ class LLMService {
         print("✅ LLM Stream Complete: \(String(format: "%.2fs", totalTime)) total, \(fullContent.count) chars")
         
         return fullContent.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-    
-    private func buildSystemPrompt(context: AppContext, settings: AppSettings) -> String {
-        var prompt = "Fix transcription errors. Remove fillers (um/uh/嗯/那个). Keep language. Output corrected text only."
-        
-        if !settings.customVocabulary.isEmpty {
-            prompt += " Terms: \(settings.customVocabulary.joined(separator: ","))"
-        }
-        
-        return prompt
     }
 }
 

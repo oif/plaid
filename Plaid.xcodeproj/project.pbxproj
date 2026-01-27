@@ -17,16 +17,11 @@
 		A10000010000000000000009 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000009 /* SettingsView.swift */; };
 		A10000010000000000000010 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000010 /* Settings.swift */; };
 		A10000010000000000000011 /* AudioWaveformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000013 /* AudioWaveformView.swift */; };
-		A10000010000000000000012 /* TypewriterText.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000014 /* TypewriterText.swift */; };
 		A10000010000000000000013 /* CompactWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000015 /* CompactWindowView.swift */; };
-		A10000010000000000000014 /* RecordedWaveformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000016 /* RecordedWaveformView.swift */; };
 		A10000010000000000000017 /* ModelManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000017 /* ModelManager.swift */; };
 		A10000010000000000000018 /* SherpaOnnxService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000018 /* SherpaOnnxService.swift */; };
 		A10000010000000000000020 /* Models in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000020 /* Models */; };
-		A10000010000000000000030 /* VoiceTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000030 /* VoiceTypes.swift */; };
-		A10000010000000000000031 /* VoiceMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000031 /* VoiceMode.swift */; };
-		A10000010000000000000032 /* VoiceProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000032 /* VoiceProvider.swift */; };
-		A10000010000000000000033 /* LocalVoiceProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000033 /* LocalVoiceProvider.swift */; };
+		A10000010000000000000034 /* AudioTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000034 /* AudioTypes.swift */; };
 		A10000010000000000000040 /* VADProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000040 /* VADProcessor.swift */; };
 		A10000010000000000000041 /* AudioPipelineDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000041 /* AudioPipelineDelegate.swift */; };
 		A10000010000000000000042 /* AudioPipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000042 /* AudioPipeline.swift */; };
@@ -58,18 +53,13 @@
 		A20000010000000000000011 /* Plaid.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Plaid.entitlements; sourceTree = "<group>"; };
 		A20000010000000000000012 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A20000010000000000000013 /* AudioWaveformView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioWaveformView.swift; sourceTree = "<group>"; };
-		A20000010000000000000014 /* TypewriterText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TypewriterText.swift; sourceTree = "<group>"; };
 		A20000010000000000000015 /* CompactWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompactWindowView.swift; sourceTree = "<group>"; };
-		A20000010000000000000016 /* RecordedWaveformView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordedWaveformView.swift; sourceTree = "<group>"; };
 		A20000010000000000000017 /* ModelManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelManager.swift; sourceTree = "<group>"; };
 		A20000010000000000000018 /* SherpaOnnxService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SherpaOnnxService.swift; sourceTree = "<group>"; };
 		A20000010000000000000019 /* Plaid-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Plaid-Bridging-Header.h"; sourceTree = "<group>"; };
 		A20000010000000000000020 /* Models */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Models; sourceTree = SOURCE_ROOT; };
 		A20000010000000000000021 /* sherpa-onnx.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = "sherpa-onnx.xcframework"; path = "../Frameworks/sherpa-onnx.xcframework"; sourceTree = "<group>"; };
-		A20000010000000000000030 /* VoiceTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceTypes.swift; sourceTree = "<group>"; };
-		A20000010000000000000031 /* VoiceMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceMode.swift; sourceTree = "<group>"; };
-		A20000010000000000000032 /* VoiceProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceProvider.swift; sourceTree = "<group>"; };
-		A20000010000000000000033 /* LocalVoiceProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalVoiceProvider.swift; sourceTree = "<group>"; };
+		A20000010000000000000034 /* AudioTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioTypes.swift; sourceTree = "<group>"; };
 		A20000010000000000000040 /* VADProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VADProcessor.swift; sourceTree = "<group>"; };
 		A20000010000000000000041 /* AudioPipelineDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPipelineDelegate.swift; sourceTree = "<group>"; };
 		A20000010000000000000042 /* AudioPipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPipeline.swift; sourceTree = "<group>"; };
@@ -154,7 +144,6 @@
 				B513EC0B2F27B000005F4669 /* TranscriptionHistory.swift */,
 				B513EC0D2F27C000005F4669 /* SpeechService.swift */,
 				A40000010000000000000008 /* Audio */,
-				A40000010000000000000007 /* Voice */,
 				A20000010000000000000005 /* STTService.swift */,
 				A20000010000000000000006 /* LLMService.swift */,
 				A20000010000000000000007 /* AppContextService.swift */,
@@ -162,6 +151,7 @@
 				A20000010000000000000010 /* Settings.swift */,
 				A20000010000000000000017 /* ModelManager.swift */,
 				A20000010000000000000018 /* SherpaOnnxService.swift */,
+				A20000010000000000000034 /* AudioTypes.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -172,9 +162,7 @@
 				B513EBF32F27921B005F4669 /* TranscriptionPillView.swift */,
 				A20000010000000000000009 /* SettingsView.swift */,
 				A20000010000000000000013 /* AudioWaveformView.swift */,
-				A20000010000000000000014 /* TypewriterText.swift */,
 				A20000010000000000000015 /* CompactWindowView.swift */,
-				A20000010000000000000016 /* RecordedWaveformView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -188,17 +176,6 @@
 				C20000010000000000000002 /* libonnxruntime.1.20.1.dylib */,
 			);
 			name = Frameworks;
-			sourceTree = "<group>";
-		};
-		A40000010000000000000007 /* Voice */ = {
-			isa = PBXGroup;
-			children = (
-				A20000010000000000000030 /* VoiceTypes.swift */,
-				A20000010000000000000031 /* VoiceMode.swift */,
-				A20000010000000000000032 /* VoiceProvider.swift */,
-				A20000010000000000000033 /* LocalVoiceProvider.swift */,
-			);
-			path = Voice;
 			sourceTree = "<group>";
 		};
 		A40000010000000000000008 /* Audio */ = {
@@ -293,10 +270,6 @@
 			files = (
 				A10000010000000000000001 /* PlaidApp.swift in Sources */,
 				A10000010000000000000002 /* ContentView.swift in Sources */,
-				A10000010000000000000030 /* VoiceTypes.swift in Sources */,
-				A10000010000000000000031 /* VoiceMode.swift in Sources */,
-				A10000010000000000000032 /* VoiceProvider.swift in Sources */,
-				A10000010000000000000033 /* LocalVoiceProvider.swift in Sources */,
 				A10000010000000000000040 /* VADProcessor.swift in Sources */,
 				A10000010000000000000041 /* AudioPipelineDelegate.swift in Sources */,
 				B513EBF02F27920F005F4669 /* GlobalHotkeyManager.swift in Sources */,
@@ -313,10 +286,9 @@
 				A10000010000000000000008 /* TextInjector.swift in Sources */,
 				A10000010000000000000009 /* SettingsView.swift in Sources */,
 				A10000010000000000000010 /* Settings.swift in Sources */,
+				A10000010000000000000034 /* AudioTypes.swift in Sources */,
 				A10000010000000000000011 /* AudioWaveformView.swift in Sources */,
-				A10000010000000000000012 /* TypewriterText.swift in Sources */,
 				A10000010000000000000013 /* CompactWindowView.swift in Sources */,
-				A10000010000000000000014 /* RecordedWaveformView.swift in Sources */,
 				A10000010000000000000017 /* ModelManager.swift in Sources */,
 				A10000010000000000000018 /* SherpaOnnxService.swift in Sources */,
 				B513EC0A2F27B000005F4669 /* TranscriptionHistory.swift in Sources */,
