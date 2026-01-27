@@ -1,0 +1,2 @@
+Frameworks/sherpa-onnx/lib/*.dylib filter=lfs diff=lfs merge=lfs -text
+Frameworks/sherpa-onnx/bin/* filter=lfs diff=lfs merge=lfs -text

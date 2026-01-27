@@ -1,0 +1,30 @@
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+*.xcuserdatad
+xcuserdata/
+
+# IDE settings
+.agents/
+.claude/
+.cursor/
+.opencode/
+.sisyphus/
+.windsurf/
+
+# macOS
+.DS_Store
+*.swp
+*~
+
+# Debug logs
+*_debug.log
+
+# Models (large files - download separately)
+Models/*.onnx
+
+# Package dependencies
+.build/
+Packages/
+*.resolved
