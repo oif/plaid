@@ -2,6 +2,7 @@ import Foundation
 import OSLog
 import OSLogClient
 import ApplicationServices
+import AppKit
 
 /// Centralized diagnostics manager for Plaid
 /// Handles logging initialization, permission monitoring, and diagnostic exports
@@ -50,15 +51,13 @@ final class DiagnosticsManager: ObservableObject {
         
         // Initialize OSLogClient for log collection
         do {
-            try OSLogClient.initialize(pollingInterval: .medium)
+            try await OSLogClient.initialize(pollingInterval: .medium)
             
             // Register file log driver
             logDriver = FileLogDriver(
                 id: "plaid-file-driver",
                 logFileUrl: logFileURL,
-                logFilters: [
-                    .subsystem(Bundle.main.bundleIdentifier ?? "com.neospaceindustries.plaid")
-                ]
+                logFilters: [.subsystem(Bundle.main.bundleIdentifier ?? "com.neospaceindustries.plaid")]
             )
             
             if let driver = logDriver {
@@ -229,7 +228,7 @@ final class DiagnosticsManager: ObservableObject {
 // MARK: - FileLogDriver
 
 /// Custom log driver that writes logs to a file
-final class FileLogDriver: LogDriver {
+final class FileLogDriver: LogDriver, @unchecked Sendable {
     
     private let logFileUrl: URL
     private let dateFormatter: DateFormatter = {
@@ -238,12 +237,12 @@ final class FileLogDriver: LogDriver {
         return f
     }()
     
-    required init(id: String, logFileUrl: URL, logFilters: [LogFilter] = []) {
+    init(id: String, logFileUrl: URL, logFilters: Set<LogFilter> = []) {
         self.logFileUrl = logFileUrl
         super.init(id: id, logFilters: logFilters)
     }
     
-    required init(id: String, logFilters: [LogFilter] = []) {
+    required init(id: String, logFilters: Set<LogFilter> = []) {
         fatalError("init(id:logFilters:) has not been implemented - use init(id:logFileUrl:logFilters:)")
     }
     
