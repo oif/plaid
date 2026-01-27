@@ -190,8 +190,9 @@ class TranscriptionPillState: ObservableObject {
                    !settings.effectiveLLMApiKey.isEmpty,
                    let llmService = llmService {
                     let llmStart = Date()
+                    let processedPrompt = buildSystemPrompt(systemPrompt, voiceInput: text)
                     let userMessage = buildUserMessage(voiceInput: text)
-                    text = try await llmService.process(userMessage, systemPrompt: systemPrompt)
+                    text = try await llmService.process(userMessage, systemPrompt: processedPrompt)
                     llmElapsed = Date().timeIntervalSince(llmStart)
                 }
                 
@@ -209,6 +210,13 @@ class TranscriptionPillState: ObservableObject {
                 hide()
             }
         }
+    }
+    
+    private func buildSystemPrompt(_ template: String, voiceInput: String) -> String {
+        var result = template
+        result = result.replacingOccurrences(of: "{{selected_text}}", with: selectedText ?? "")
+        result = result.replacingOccurrences(of: "{{voice_input}}", with: voiceInput)
+        return result
     }
     
     private func buildUserMessage(voiceInput: String) -> String {

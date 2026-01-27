@@ -125,6 +125,10 @@ class AppSettings: ObservableObject {
         didSet { defaults.set(lastSelectedModeId, forKey: "lastSelectedModeId") }
     }
     
+    @Published var defaultModeId: String {
+        didSet { defaults.set(defaultModeId, forKey: "defaultModeId") }
+    }
+    
     var allModes: [Mode] {
         Mode.builtinModes + customModes
     }
@@ -161,7 +165,9 @@ class AppSettings: ObservableObject {
         } else {
             self.customModes = []
         }
-        self.lastSelectedModeId = defaults.string(forKey: "lastSelectedModeId") ?? Mode.defaultMode.id
+        let defaultMode = defaults.string(forKey: "defaultModeId") ?? "voice_transcription"
+        self.defaultModeId = defaultMode
+        self.lastSelectedModeId = defaults.string(forKey: "lastSelectedModeId") ?? defaultMode
         
         let spaceKeyCode = 49
         self.hotkeyKeyCode = defaults.object(forKey: "hotkeyKeyCode") as? Int ?? spaceKeyCode

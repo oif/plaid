@@ -51,7 +51,13 @@ struct Mode: Identifiable, Codable, Hashable, Sendable {
     
     static let builtinModes: [Mode] = [.voiceTranscription, .dictation]
     
-    static let defaultMode: Mode = .voiceTranscription
+    static var defaultMode: Mode {
+        let settings = AppSettings.shared
+        if let mode = settings.mode(byId: settings.defaultModeId) {
+            return mode
+        }
+        return .voiceTranscription
+    }
     
     // MARK: - Hashable
     

@@ -381,19 +381,29 @@ struct SettingsContentView: View {
     
     private var modesTab: some View {
         Form {
+            Section("Default Mode") {
+                Picker("Default", selection: $settings.defaultModeId) {
+                    ForEach(settings.allModes) { mode in
+                        HStack {
+                            Text(mode.icon)
+                            Text(mode.name)
+                        }
+                        .tag(mode.id)
+                    }
+                }
+            }
+            
             Section {
                 ForEach(Mode.builtinModes) { mode in
-                    ModeListRow(mode: mode, isBuiltin: true) { }
+                    ModeListRow(mode: mode, isBuiltin: true, isDefault: mode.id == settings.defaultModeId) { }
                 }
             } header: {
                 Text("Built-in Modes")
-            } footer: {
-                Text("Built-in modes cannot be modified")
             }
             
             Section {
                 ForEach(settings.customModes) { mode in
-                    ModeListRow(mode: mode, isBuiltin: false) {
+                    ModeListRow(mode: mode, isBuiltin: false, isDefault: mode.id == settings.defaultModeId) {
                         editingMode = mode
                         showModeEditor = true
                     }
@@ -402,6 +412,10 @@ struct SettingsContentView: View {
                             editingMode = mode
                             showModeEditor = true
                         }
+                        Button("Set as Default") {
+                            settings.defaultModeId = mode.id
+                        }
+                        Divider()
                         Button("Delete", role: .destructive) {
                             settings.customModes.removeAll { $0.id == mode.id }
                         }
@@ -419,8 +433,6 @@ struct SettingsContentView: View {
                 }
             } header: {
                 Text("Custom Modes")
-            } footer: {
-                Text("Create custom modes with specific prompts for different use cases")
             }
         }
         .formStyle(.grouped)
@@ -497,6 +509,7 @@ struct SettingsContentView: View {
 struct ModeListRow: View {
     let mode: Mode
     let isBuiltin: Bool
+    var isDefault: Bool = false
     let onTap: () -> Void
     
     var body: some View {
@@ -506,8 +519,18 @@ struct ModeListRow: View {
                     .font(.title2)
                 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(mode.name)
-                        .font(.body)
+                    HStack(spacing: 6) {
+                        Text(mode.name)
+                            .font(.body)
+                        if isDefault {
+                            Text("Default")
+                                .font(.caption2)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(.accent.opacity(0.15), in: Capsule())
+                                .foregroundStyle(.accent)
+                        }
+                    }
                     
                     HStack(spacing: 8) {
                         if mode.skipLLM {
@@ -597,14 +620,45 @@ struct ModeEditorView: View {
                 }
                 
                 if !skipLLM {
-                    Section("System Prompt") {
+                    Section {
                         TextEditor(text: $systemPrompt)
                             .frame(minHeight: 120)
                             .font(.body.monospaced())
                         
-                        Text("The system prompt guides how the LLM processes your voice input")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Available variables:")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                            
+                            HStack(spacing: 16) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("{{voice_input}}")
+                                        .font(.caption.monospaced())
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(.secondary.opacity(0.1), in: RoundedRectangle(cornerRadius: 4))
+                                    Text("Voice transcription")
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                                
+                                if useSelectedText {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("{{selected_text}}")
+                                            .font(.caption.monospaced())
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 2)
+                                            .background(.secondary.opacity(0.1), in: RoundedRectangle(cornerRadius: 4))
+                                        Text("Text selected before activation")
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.top, 4)
+                    } header: {
+                        Text("System Prompt")
                     }
                 }
             }
