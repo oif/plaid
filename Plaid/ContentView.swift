@@ -1,6 +1,18 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+enum MainTab: String, CaseIterable {
+    case history = "History"
+    case settings = "Settings"
+    
+    var icon: String {
+        switch self {
+        case .history: return "clock"
+        case .settings: return "gear"
+        }
+    }
+}
+
 struct ContentView: View {
     @EnvironmentObject var appState: AppState
     @State private var selectedRecord: TranscriptionRecord?
@@ -26,7 +38,7 @@ struct ContentView: View {
             detailView
         }
         .frame(minWidth: 700, minHeight: 500)
-        .searchable(text: $searchText, prompt: "Search transcriptions...")
+        .searchable(text: $searchText, isPresented: .constant(appState.selectedMainTab == .history), prompt: "Search transcriptions...")
         .fileImporter(
             isPresented: $showFileImporter,
             allowedContentTypes: [.wav, .audio],
@@ -40,38 +52,69 @@ struct ContentView: View {
     
     private var sidebarView: some View {
         VStack(spacing: 0) {
-            statsHeader
+            // Tab picker
+            Picker("", selection: $appState.selectedMainTab) {
+                ForEach(MainTab.allCases, id: \.self) { tab in
+                    Label(tab.rawValue, systemImage: tab.icon)
+                        .tag(tab)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal)
+            .padding(.top, 12)
+            .padding(.bottom, 8)
             
             Divider()
             
-            if filteredRecords.isEmpty {
-                emptyStateView
+            if appState.selectedMainTab == .history {
+                statsHeader
+                
+                Divider()
+                
+                if filteredRecords.isEmpty {
+                    emptyStateView
+                } else {
+                    recordsList
+                }
             } else {
-                recordsList
+                settingsSidebar
             }
         }
         .frame(minWidth: 280)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
-                Button {
-                    showFileImporter = true
-                } label: {
-                    Label("Import Audio", systemImage: "doc.badge.plus")
+                if appState.selectedMainTab == .history {
+                    Button {
+                        showFileImporter = true
+                    } label: {
+                        Label("Import Audio", systemImage: "doc.badge.plus")
+                    }
+                    .keyboardShortcut("o", modifiers: .command)
+                    
+                    Button {
+                        Task { await appState.toggleRecording() }
+                    } label: {
+                        Label(
+                            appState.isRecording ? "Stop" : "Record",
+                            systemImage: appState.isRecording ? "stop.fill" : "mic.fill"
+                        )
+                    }
+                    .tint(appState.isRecording ? .red : .accentColor)
+                    .keyboardShortcut("r", modifiers: .command)
                 }
-                .keyboardShortcut("o", modifiers: .command)
-                
-                Button {
-                    Task { await appState.toggleRecording() }
-                } label: {
-                    Label(
-                        appState.isRecording ? "Stop" : "Record",
-                        systemImage: appState.isRecording ? "stop.fill" : "mic.fill"
-                    )
-                }
-                .tint(appState.isRecording ? .red : .accentColor)
-                .keyboardShortcut("r", modifiers: .command)
             }
         }
+    }
+    
+    private var settingsSidebar: some View {
+        List {
+            Label("General", systemImage: "gear")
+            Label("Speech", systemImage: "mic")
+            Label("AI", systemImage: "sparkles")
+            Label("Modes", systemImage: "square.stack.3d.up")
+            Label("About", systemImage: "info.circle")
+        }
+        .listStyle(.sidebar)
     }
     
     private var statsHeader: some View {
@@ -159,7 +202,10 @@ struct ContentView: View {
     
     @ViewBuilder
     private var detailView: some View {
-        if let record = selectedRecord {
+        if appState.selectedMainTab == .settings {
+            SettingsContentView()
+                .environmentObject(appState)
+        } else if let record = selectedRecord {
             RecordDetailView(record: record)
         } else {
             placeholderView

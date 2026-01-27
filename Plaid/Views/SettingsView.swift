@@ -1,6 +1,15 @@
 import SwiftUI
 
+// Settings view for separate window (legacy, kept for reference)
 struct SettingsView: View {
+    var body: some View {
+        SettingsContentView()
+            .frame(width: 520, height: 480)
+    }
+}
+
+// Settings content that adapts to container - used in main window
+struct SettingsContentView: View {
     @EnvironmentObject var appState: AppState
     
     // Use @ObservedObject for singletons that need bindings ($settings, $modelManager, etc.)
@@ -48,7 +57,6 @@ struct SettingsView: View {
                     Label("About", systemImage: "info.circle")
                 }
         }
-        .frame(width: 520, height: 480)
         .onAppear {
             apiKey = settings.openAIKey
             customSTTApiKey = settings.customSTTApiKey

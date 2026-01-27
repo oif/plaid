@@ -23,11 +23,6 @@ struct PlaidApp: App {
         .windowResizability(.contentSize)
         .defaultPosition(.topTrailing)
         
-        Settings {
-            SettingsView()
-                .environmentObject(appState)
-        }
-        
         MenuBarExtra {
             MenuBarView()
                 .environmentObject(appState)
@@ -63,6 +58,7 @@ class AppState: ObservableObject {
     @Published var isProcessing = false
     @Published var timing = TimingStats()
     @Published var recordingStartTime: Date?
+    @Published var selectedMainTab: MainTab = .history
     
     let sttService = STTService()
     let llmService = LLMService()
@@ -338,7 +334,13 @@ struct MenuBarView: View {
                     .help("Compact Mode")
                     
                     Button {
-                        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                        appState.selectedMainTab = .settings
+                        NSApp.activate(ignoringOtherApps: true)
+                        if let window = NSApp.windows.first(where: { $0.title == "Plaid" || $0.identifier?.rawValue == "main" }) {
+                            window.makeKeyAndOrderFront(nil)
+                        } else {
+                            NSApp.windows.first?.makeKeyAndOrderFront(nil)
+                        }
                     } label: {
                         Image(systemName: "gear")
                             .frame(width: 32, height: 32)
