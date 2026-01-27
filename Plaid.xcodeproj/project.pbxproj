@@ -461,7 +461,7 @@
 					"-rpath",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.plaid.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.neospaceindustries.plaid.dev;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OBJC_BRIDGING_HEADER = "Plaid/Plaid-Bridging-Header.h";
@@ -510,7 +510,7 @@
 					"-rpath",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.plaid.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.neospaceindustries.plaid;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OBJC_BRIDGING_HEADER = "Plaid/Plaid-Bridging-Header.h";
