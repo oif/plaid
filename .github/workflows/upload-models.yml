@@ -1,0 +1,151 @@
+name: Upload Models
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: 'Model to upload'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - sensevoice-int8
+          - sensevoice-fp32
+
+env:
+  R2_BUCKET: ${{ secrets.R2_BUCKET }}
+
+jobs:
+  upload-models:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Setup
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+          
+      - name: Download and prepare sensevoice models
+        run: |
+          mkdir -p models
+          
+          echo "Downloading SenseVoice from sherpa-onnx..."
+          curl -L -o /tmp/sensevoice.tar.bz2 \
+            "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17.tar.bz2"
+          
+          echo "Extracting..."
+          tar -xjf /tmp/sensevoice.tar.bz2 -C /tmp
+          
+          EXTRACTED="/tmp/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17"
+          
+          if [[ "${{ inputs.model }}" == "all" || "${{ inputs.model }}" == "sensevoice-int8" ]]; then
+            echo "Preparing sensevoice-int8..."
+            mkdir -p models/sensevoice-int8
+            cp "$EXTRACTED/model.int8.onnx" models/sensevoice-int8/
+            cp "$EXTRACTED/tokens.txt" models/sensevoice-int8/
+            
+            echo "Packaging sensevoice-int8.tar.gz..."
+            tar -czf models/sensevoice-int8.tar.gz -C models sensevoice-int8
+            ls -lh models/sensevoice-int8.tar.gz
+          fi
+          
+          if [[ "${{ inputs.model }}" == "all" || "${{ inputs.model }}" == "sensevoice-fp32" ]]; then
+            echo "Preparing sensevoice-fp32..."
+            mkdir -p models/sensevoice-fp32
+            cp "$EXTRACTED/model.onnx" models/sensevoice-fp32/
+            cp "$EXTRACTED/tokens.txt" models/sensevoice-fp32/
+            
+            echo "Packaging sensevoice-fp32.tar.gz..."
+            tar -czf models/sensevoice-fp32.tar.gz -C models sensevoice-fp32
+            ls -lh models/sensevoice-fp32.tar.gz
+          fi
+          
+          rm -rf /tmp/sensevoice.tar.bz2 "$EXTRACTED"
+          
+      - name: Configure AWS CLI for R2
+        run: |
+          aws configure set aws_access_key_id ${{ secrets.R2_ACCESS_KEY_ID }}
+          aws configure set aws_secret_access_key ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          aws configure set region auto
+          aws configure set default.s3.multipart_chunksize 64MB
+          aws configure set default.s3.max_concurrent_requests 4
+          
+      - name: Upload to R2
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+        run: |
+          R2_ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+          
+          # Download existing manifest or create new
+          aws s3 cp "s3://${R2_BUCKET}/models/manifest.json" manifest.json \
+            --endpoint-url "$R2_ENDPOINT" 2>/dev/null || echo '{"models":{}}' > manifest.json
+          
+          upload_model() {
+            local name=$1
+            local file="models/${name}.tar.gz"
+            
+            if [ ! -f "$file" ]; then
+              echo "Skipping $name (not prepared)"
+              return
+            fi
+            
+            echo "Uploading $name..."
+            for i in 1 2 3; do
+              aws s3 cp "$file" "s3://${R2_BUCKET}/models/${name}.tar.gz" \
+                --endpoint-url "$R2_ENDPOINT" && break
+              echo "Retry $i..."
+              sleep 5
+            done
+            
+            # Update manifest
+            local size=$(stat -c%s "$file")
+            local checksum=$(md5sum "$file" | cut -d' ' -f1 | head -c 8)
+            local updated=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+            
+            jq --arg name "$name" \
+               --arg checksum "$checksum" \
+               --arg size "$size" \
+               --arg updated "$updated" \
+               '.models[$name] = {checksum: $checksum, size: ($size | tonumber), updated: $updated}' \
+               manifest.json > manifest.tmp && mv manifest.tmp manifest.json
+               
+            echo "  Size: $(numfmt --to=iec-i --suffix=B $size)"
+            echo "  Checksum: $checksum"
+          }
+          
+          if [[ "${{ inputs.model }}" == "all" ]]; then
+            upload_model "sensevoice-int8"
+            upload_model "sensevoice-fp32"
+          else
+            upload_model "${{ inputs.model }}"
+          fi
+          
+          # Upload manifest
+          echo ""
+          echo "Uploading manifest.json..."
+          aws s3 cp manifest.json "s3://${R2_BUCKET}/models/manifest.json" \
+            --endpoint-url "$R2_ENDPOINT" \
+            --content-type "application/json"
+          
+          echo ""
+          echo "Manifest:"
+          cat manifest.json | jq .
+          
+      - name: Summary
+        run: |
+          echo "## Models Upload Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Model | Size | URL |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|------|-----|" >> $GITHUB_STEP_SUMMARY
+          
+          for f in models/*.tar.gz; do
+            if [ -f "$f" ]; then
+              name=$(basename "$f")
+              size=$(ls -lh "$f" | awk '{print $5}')
+              echo "| ${name%.tar.gz} | $size | https://dl.plaid.oo.sb/models/$name |" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Manifest**: https://dl.plaid.oo.sb/models/manifest.json" >> $GITHUB_STEP_SUMMARY

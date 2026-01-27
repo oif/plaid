@@ -30,5 +30,13 @@
     <string>Plaid uses speech recognition to convert your voice to text.</string>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
+    <key>SUFeedURL</key>
+    <string>https://dl.plaid.oo.sb/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string>AusIZzNdMrRWGou6wQQy7ic4r7I/pkSOGSlDb4Wo6KE=</string>
+    <key>SUEnableAutomaticChecks</key>
+    <true/>
+    <key>SUAllowsAutomaticUpdates</key>
+    <true/>
 </dict>
 </plist>

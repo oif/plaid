@@ -21,10 +21,25 @@ xcuserdata/
 # Debug logs
 *_debug.log
 
-# Models (large files - download separately)
-Models/*.onnx
+# Models (download-on-demand from R2)
+Models/
 
 # Package dependencies
 .build/
 Packages/
 *.resolved
+
+# Release artifacts
+releases/
+*.dmg
+*.zip
+
+# Sparkle private key (NEVER commit)
+sparkle_private_key*
+*.pem
+
+# Test files and experiments
+SenseVoiceServer/
+*.wav
+*.png
+.continue/

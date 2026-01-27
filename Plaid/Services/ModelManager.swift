@@ -57,18 +57,12 @@ enum LocalModel: String, CaseIterable, Codable, Identifiable {
         }
     }
     
-    var isBundled: Bool {
-        // Only sensevoiceInt8 is bundled with the app
-        self == .sensevoiceInt8
-    }
-    
-    // Download URLs from sherpa-onnx GitHub releases
     var downloadURL: URL? {
         switch self {
         case .sensevoiceInt8:
-            return nil  // Bundled, no download needed
+            return URL(string: "https://dl.plaid.oo.sb/models/sensevoice-int8.tar.gz")
         case .sensevoiceFp32:
-            return URL(string: "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17.tar.bz2")
+            return URL(string: "https://dl.plaid.oo.sb/models/sensevoice-fp32.tar.gz")
         case .whisperTiny:
             return URL(string: "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-tiny.tar.bz2")
         case .whisperBase:
@@ -78,13 +72,21 @@ enum LocalModel: String, CaseIterable, Codable, Identifiable {
         }
     }
     
-    // Directory name after extraction
+    var archiveFormat: String {
+        switch self {
+        case .sensevoiceInt8, .sensevoiceFp32:
+            return "tar.gz"
+        case .whisperTiny, .whisperBase, .whisperSmall:
+            return "tar.bz2"
+        }
+    }
+    
     var extractedDirName: String {
         switch self {
         case .sensevoiceInt8:
             return "sensevoice-int8"
         case .sensevoiceFp32:
-            return "sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17"
+            return "sensevoice-fp32"
         case .whisperTiny:
             return "sherpa-onnx-whisper-tiny"
         case .whisperBase:
@@ -147,38 +149,11 @@ class ModelManager: ObservableObject {
         return modelsDir
     }
     
-    nonisolated var bundledModelsDirectory: URL? {
-        // First check if models are in the app bundle
-        if let bundlePath = Bundle.main.resourceURL?.appendingPathComponent("Models") {
-            if fileManager.fileExists(atPath: bundlePath.path) {
-                return bundlePath
-            }
-        }
-        
-        // Fallback: check the project directory during development
-        let projectModels = URL(fileURLWithPath: "/Users/neo/Desktop/thyper/Models")
-        if fileManager.fileExists(atPath: projectModels.path) {
-            return projectModels
-        }
-        
-        return nil
-    }
-    
     nonisolated func modelPath(_ model: LocalModel) -> URL? {
-        // Check bundled location first (for sensevoiceInt8)
-        if model.isBundled, let bundled = bundledModelsDirectory {
-            let bundledPath = bundled.appendingPathComponent(model.extractedDirName)
-            if fileManager.fileExists(atPath: bundledPath.path) {
-                return bundledPath
-            }
-        }
-        
-        // Check downloaded location
         let downloadedPath = modelsDirectory.appendingPathComponent(model.extractedDirName)
         if fileManager.fileExists(atPath: downloadedPath.path) {
             return downloadedPath
         }
-        
         return nil
     }
     
@@ -211,10 +186,6 @@ class ModelManager: ObservableObject {
     // MARK: - Download
     
     func downloadModel(_ model: LocalModel) async throws {
-        guard !model.isBundled else {
-            throw ModelError.modelBundled
-        }
-        
         guard let url = model.downloadURL else {
             throw ModelError.noDownloadURL
         }
@@ -262,7 +233,7 @@ class ModelManager: ObservableObject {
         let expectedLength = response.expectedContentLength
         var receivedLength: Int64 = 0
         
-        let tempURL = fileManager.temporaryDirectory.appendingPathComponent("\(model.rawValue).tar.bz2")
+        let tempURL = fileManager.temporaryDirectory.appendingPathComponent("\(model.rawValue).\(model.archiveFormat)")
         
         // Remove existing temp file if any
         try? fileManager.removeItem(at: tempURL)
@@ -290,10 +261,11 @@ class ModelManager: ObservableObject {
     private func extractArchive(at archiveURL: URL, for model: LocalModel) async throws {
         let destinationDir = modelsDirectory
         
-        // Use tar to extract .tar.bz2
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/tar")
-        process.arguments = ["-xjf", archiveURL.path, "-C", destinationDir.path]
+        
+        let tarFlags = model.archiveFormat == "tar.gz" ? "-xzf" : "-xjf"
+        process.arguments = [tarFlags, archiveURL.path, "-C", destinationDir.path]
         
         try process.run()
         process.waitUntilExit()
@@ -310,21 +282,11 @@ class ModelManager: ObservableObject {
     // MARK: - Delete
     
     func deleteModel(_ model: LocalModel) throws {
-        guard !model.isBundled else {
-            throw ModelError.cannotDeleteBundled
-        }
-        
-        guard let path = modelPath(model) else {
-            return  // Already doesn't exist
-        }
-        
-        // Only delete from downloaded location, not bundled
         let downloadedPath = modelsDirectory.appendingPathComponent(model.extractedDirName)
-        if fileManager.fileExists(atPath: downloadedPath.path) {
-            try fileManager.removeItem(at: downloadedPath)
-        }
+        guard fileManager.fileExists(atPath: downloadedPath.path) else { return }
         
-        // If this was the selected model, switch to default
+        try fileManager.removeItem(at: downloadedPath)
+        
         if selectedModel == model {
             selectedModel = .sensevoiceInt8
         }
@@ -382,22 +344,18 @@ class ModelManager: ObservableObject {
 // MARK: - Errors
 
 enum ModelError: Error, LocalizedError {
-    case modelBundled
     case noDownloadURL
     case alreadyDownloading
     case downloadFailed
     case extractionFailed
-    case cannotDeleteBundled
     case modelNotFound
     
     var errorDescription: String? {
         switch self {
-        case .modelBundled: return "This model is bundled with the app"
         case .noDownloadURL: return "No download URL available for this model"
         case .alreadyDownloading: return "Model is already being downloaded"
         case .downloadFailed: return "Failed to download model"
         case .extractionFailed: return "Failed to extract model archive"
-        case .cannotDeleteBundled: return "Cannot delete bundled model"
         case .modelNotFound: return "Model files not found"
         }
     }
