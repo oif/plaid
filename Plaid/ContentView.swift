@@ -17,6 +17,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
     case general = "General"
     case speech = "Speech"
     case integrations = "Integrations"
+    case diagnostics = "Diagnostics"
     case about = "About"
     
     var id: String { rawValue }
@@ -26,6 +27,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .general: return "gear"
         case .speech: return "waveform"
         case .integrations: return "puzzlepiece.extension"
+        case .diagnostics: return "stethoscope"
         case .about: return "info.circle"
         }
     }

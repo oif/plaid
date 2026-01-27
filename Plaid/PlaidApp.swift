@@ -1,4 +1,5 @@
 import SwiftUI
+import OSLog
 
 @main
 struct PlaidApp: App {
@@ -76,6 +77,10 @@ class AppState: ObservableObject {
     func initialize() async {
         statusMessage = "Initializing..."
         
+        Logger.app.info("Plaid starting initialization")
+        
+        await DiagnosticsManager.shared.initialize()
+        
         if !appContext.hasAccessibilityPermission {
             appContext.requestAccessibilityPermission()
         }
@@ -106,21 +111,6 @@ class AppState: ObservableObject {
         GlobalHotkeyManager.shared.start()
     }
     
-    private func debugLog(_ msg: String) {
-        let str = "\(Date()): [App] \(msg)\n"
-        let url = URL(fileURLWithPath: "/Users/neo/Desktop/thyper_debug.log")
-        if let data = str.data(using: .utf8) {
-            if FileManager.default.fileExists(atPath: url.path) {
-                if let handle = try? FileHandle(forWritingTo: url) {
-                    handle.seekToEndOfFile()
-                    handle.write(data)
-                    try? handle.close()
-                }
-            } else {
-                try? data.write(to: url)
-            }
-        }
-    }
     
     private func preloadLocalModel() async {
         let model = await ModelManager.shared.selectedModel
@@ -129,9 +119,9 @@ class AppState: ObservableObject {
         do {
             try await SherpaOnnxService.shared.initializeAsync(with: model)
             SherpaOnnxService.shared.warmup()
-            print("✅ Local model preloaded: \(model.displayName)")
+            Logger.models.info("Local model preloaded: \(model.displayName)")
         } catch {
-            print("⚠️ Failed to preload model: \(error)")
+            Logger.models.warning("Failed to preload model: \(error.localizedDescription)")
         }
     }
     
@@ -190,7 +180,7 @@ class AppState: ObservableObject {
             timing.totalDuration = Date().timeIntervalSince(totalStart)
             statusMessage = "Done"
             
-            print("📊 Timing: Recording=\(timing.formattedRecording), STT=\(timing.formattedSTT), LLM=\(timing.formattedLLM), Inject=\(timing.formattedInject), Total=\(timing.formattedTotal)")
+            Logger.stt.info("Timing: Recording=\(self.timing.formattedRecording), STT=\(self.timing.formattedSTT), LLM=\(self.timing.formattedLLM), Inject=\(self.timing.formattedInject), Total=\(self.timing.formattedTotal)")
             
         } catch {
             statusMessage = "Error: \(error.localizedDescription)"
@@ -229,7 +219,7 @@ class AppState: ObservableObject {
             timing.totalDuration = Date().timeIntervalSince(totalStart)
             statusMessage = "Done"
             
-            print("📊 File Timing: STT=\(timing.formattedSTT), LLM=\(timing.formattedLLM), Total=\(timing.formattedTotal)")
+            Logger.stt.info("File Timing: STT=\(self.timing.formattedSTT), LLM=\(self.timing.formattedLLM), Total=\(self.timing.formattedTotal)")
             
         } catch {
             statusMessage = "Error: \(error.localizedDescription)"
