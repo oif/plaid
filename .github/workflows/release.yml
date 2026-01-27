@@ -10,6 +10,9 @@ env:
   SCHEME: Plaid
   BUNDLE_ID: com.plaid.app
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: macos-15
