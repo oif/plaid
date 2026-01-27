@@ -58,7 +58,7 @@ class AppState: ObservableObject {
     @Published var isProcessing = false
     @Published var timing = TimingStats()
     @Published var recordingStartTime: Date?
-    @Published var selectedMainTab: MainTab = .history
+    @Published var selectedMainTab: MainTab = .home
     
     let sttService = STTService()
     let llmService = LLMService()

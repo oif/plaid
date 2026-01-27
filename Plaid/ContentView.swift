@@ -2,12 +2,12 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 enum MainTab: String, CaseIterable {
-    case history = "History"
+    case home = "Home"
     case settings = "Settings"
     
     var icon: String {
         switch self {
-        case .history: return "clock.arrow.trianglehead.counterclockwise.rotate.90"
+        case .home: return "house"
         case .settings: return "slider.horizontal.3"
         }
     }
@@ -15,8 +15,8 @@ enum MainTab: String, CaseIterable {
 
 enum SettingsSection: String, CaseIterable, Identifiable {
     case general = "General"
-    case services = "Services"
-    case modes = "Modes"
+    case speech = "Speech"
+    case integrations = "Integrations"
     case about = "About"
     
     var id: String { rawValue }
@@ -24,8 +24,8 @@ enum SettingsSection: String, CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .general: return "gear"
-        case .services: return "bolt.horizontal"
-        case .modes: return "square.stack.3d.up"
+        case .speech: return "waveform"
+        case .integrations: return "puzzlepiece.extension"
         case .about: return "info.circle"
         }
     }
@@ -61,16 +61,18 @@ struct TabButton: View {
     let isSelected: Bool
     let namespace: Namespace.ID
     let action: () -> Void
+    @State private var isHovered = false
     
     var body: some View {
         Button(action: action) {
             HStack(spacing: 6) {
                 Image(systemName: tab.icon)
                     .font(.system(size: 11, weight: .medium))
+                    .symbolEffect(.bounce, value: isSelected)
                 Text(tab.rawValue)
                     .font(.system(size: 12, weight: .medium))
             }
-            .foregroundStyle(isSelected ? .primary : .secondary)
+            .foregroundColor(isSelected ? .primary : (isHovered ? .primary.opacity(0.8) : .secondary))
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
             .contentShape(Capsule())
@@ -79,10 +81,18 @@ struct TabButton: View {
                     Capsule()
                         .fill(.ultraThinMaterial)
                         .matchedGeometryEffect(id: "activeTab", in: namespace)
+                } else if isHovered {
+                    Capsule()
+                        .fill(.secondary.opacity(0.08))
                 }
             }
         }
         .buttonStyle(.plain)
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isHovered = hovering
+            }
+        }
     }
 }
 
@@ -93,6 +103,7 @@ struct ContentView: View {
     @State private var selectedRecord: TranscriptionRecord?
     @State private var selectedSettingsSection: SettingsSection = .general
     @State private var showFileImporter = false
+    @State private var emptyStatePulse = false
     
     @ObservedObject private var historyService = TranscriptionHistoryService.shared
     
@@ -122,7 +133,7 @@ struct ContentView: View {
                 .padding(.top, 16)
                 .padding(.bottom, 12)
             
-            if appState.selectedMainTab == .history {
+            if appState.selectedMainTab == .home {
                 historyContent
             } else {
                 settingsSidebar
@@ -131,7 +142,7 @@ struct ContentView: View {
         .frame(minWidth: 280)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
-                if appState.selectedMainTab == .history {
+                if appState.selectedMainTab == .home {
                     Button {
                         showFileImporter = true
                     } label: {
@@ -156,18 +167,34 @@ struct ContentView: View {
     
     private var historyContent: some View {
         VStack(spacing: 0) {
-            // Compact stats strip
-            statsStrip
-                .padding(.horizontal, 16)
-                .padding(.bottom, 12)
-            
-            Divider()
-                .padding(.horizontal, 12)
+            Button {
+                selectedRecord = nil
+            } label: {
+                statsStrip
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 12)
             
             if historyService.recentRecords.isEmpty {
                 emptyStateView
             } else {
-                recordsList
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack {
+                        Text("RECENT")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(.tertiary)
+                            .tracking(0.5)
+                        Spacer()
+                        Text("\(historyService.recentRecords.count)")
+                            .font(.system(size: 10, weight: .medium, design: .rounded))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    
+                    recordsList
+                }
             }
         }
     }
@@ -182,66 +209,118 @@ struct ContentView: View {
         .listStyle(.sidebar)
     }
     
-    // MARK: - Stats Strip (Compact)
+    // MARK: - Stats Strip
+    
+    @State private var statsHovered = false
     
     private var statsStrip: some View {
-        HStack(spacing: 0) {
-            statsItem(value: historyService.todayCount, label: "Today", icon: "sun.max")
+        VStack(spacing: 6) {
+            // Header
+            HStack {
+                Text("TODAY")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.secondary)
+                    .tracking(1)
+                Spacer()
+                Text(Date(), format: .dateTime.month(.abbreviated).day())
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 2)
             
-            Divider()
-                .frame(height: 24)
-                .padding(.horizontal, 12)
-            
-            statsItem(value: historyService.recentRecords.count, label: "Total", icon: "archivebox")
-            
-            Divider()
-                .frame(height: 24)
-                .padding(.horizontal, 12)
-            
-            statsItem(value: formatCharCount(historyService.totalCharacters), label: "Chars", icon: "character.cursor.ibeam")
+            // Stats Grid
+            HStack(spacing: 12) {
+                todayStatItem(
+                    value: historyService.todayWPM > 0 ? "\(Int(historyService.todayWPM))" : "-",
+                    label: "WPM",
+                    icon: "waveform",
+                    color: .orange
+                )
+                
+                todayStatItem(
+                    value: formatWordCount(historyService.todayWords),
+                    label: "Words",
+                    icon: "character.cursor.ibeam",
+                    color: .blue
+                )
+                
+                todayStatItem(
+                    value: formatUsageTime(historyService.todayUsageSeconds),
+                    label: "Usage",
+                    icon: "clock",
+                    color: .green
+                )
+                
+                todayStatItem(
+                    value: "#--",
+                    label: "Rank",
+                    icon: "globe",
+                    color: .purple
+                )
+            }
         }
         .padding(.vertical, 10)
-        .padding(.horizontal, 16)
-        .glassEffect(.regular, in: .rect(cornerRadius: 12))
+        .padding(.horizontal, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(.secondary.opacity(statsHovered ? 0.1 : 0.06))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .strokeBorder(.secondary.opacity(statsHovered ? 0.15 : 0), lineWidth: 1)
+        )
+        .scaleEffect(statsHovered ? 1.01 : 1.0)
+        .animation(.easeInOut(duration: 0.15), value: statsHovered)
+        .onHover { hovering in
+            statsHovered = hovering
+        }
+        .help("Click to return to Home")
     }
     
-    private func statsItem(value: Int, label: String, icon: String) -> some View {
-        HStack(spacing: 8) {
+    private func todayStatItem(value: String, label: String, icon: String, color: Color) -> some View {
+        VStack(spacing: 3) {
             Image(systemName: icon)
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 9))
+                .foregroundStyle(color.opacity(0.7))
             
-            VStack(alignment: .leading, spacing: 1) {
-                Text("\(value)")
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-                    .monospacedDigit()
-                Text(label)
-                    .font(.system(size: 10))
-                    .foregroundStyle(.tertiary)
-            }
+            Text(value)
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .monospacedDigit()
+            
+            Text(label)
+                .font(.system(size: 8))
+                .foregroundStyle(.tertiary)
         }
         .frame(maxWidth: .infinity)
     }
     
-    private func statsItem(value: String, label: String, icon: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
-            
-            VStack(alignment: .leading, spacing: 1) {
-                Text(value)
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-                    .monospacedDigit()
-                Text(label)
-                    .font(.system(size: 10))
-                    .foregroundStyle(.tertiary)
-            }
+    private func formatUsageTime(_ seconds: Double) -> String {
+        if seconds < 60 {
+            return seconds > 0 ? "\(Int(seconds))s" : "-"
+        } else if seconds < 3600 {
+            return "\(Int(seconds / 60))m"
+        } else {
+            return String(format: "%.1fh", seconds / 3600)
         }
-        .frame(maxWidth: .infinity)
     }
     
-    private func formatCharCount(_ count: Int) -> String {
+    private func formatTimeSaved(_ minutes: Double) -> String {
+        if minutes < 1 {
+            return "<1m"
+        } else if minutes < 60 {
+            return String(format: "%.0fm", minutes)
+        } else {
+            let hours = minutes / 60
+            return String(format: "%.1fh", hours)
+        }
+    }
+    
+    private func formatSpeedMultiplier(_ multiplier: Double) -> String {
+        if multiplier < 0.1 { return "-" }
+        return String(format: "%.1fx", multiplier)
+    }
+    
+    private func formatWordCount(_ count: Int) -> String {
         if count >= 10000 {
             return String(format: "%.1fK", Double(count) / 1000)
         }
@@ -255,11 +334,10 @@ struct ContentView: View {
             Spacer()
             
             ZStack {
-                // Subtle gradient background glow
                 Circle()
                     .fill(
                         RadialGradient(
-                            colors: [.accentColor.opacity(0.15), .clear],
+                            colors: [.accentColor.opacity(emptyStatePulse ? 0.2 : 0.1), .clear],
                             center: .center,
                             startRadius: 0,
                             endRadius: 60
@@ -267,10 +345,17 @@ struct ContentView: View {
                     )
                     .frame(width: 120, height: 120)
                     .blur(radius: 20)
+                    .scaleEffect(emptyStatePulse ? 1.1 : 1.0)
                 
                 Image(systemName: "waveform.badge.mic")
                     .font(.system(size: 44, weight: .thin))
                     .foregroundStyle(.secondary.opacity(0.6))
+                    .symbolEffect(.pulse, options: .repeating)
+            }
+            .onAppear {
+                withAnimation(.easeInOut(duration: 2).repeatForever(autoreverses: true)) {
+                    emptyStatePulse = true
+                }
             }
             
             VStack(spacing: 8) {
@@ -295,9 +380,13 @@ struct ContentView: View {
     
     private var recordsList: some View {
         List(selection: $selectedRecord) {
-            ForEach(historyService.recentRecords) { record in
+            ForEach(Array(historyService.recentRecords.enumerated()), id: \.element.id) { index, record in
                 RecordRow(record: record)
                     .tag(record)
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .move(edge: .top)),
+                        removal: .opacity.combined(with: .scale(scale: 0.95))
+                    ))
                     .contextMenu {
                         Button {
                             copyToClipboard(record.displayText)
@@ -325,59 +414,71 @@ struct ContentView: View {
     
     @ViewBuilder
     private var detailView: some View {
-        if appState.selectedMainTab == .settings {
-            SettingsContentView(selectedSection: selectedSettingsSection)
-                .environmentObject(appState)
-        } else if let record = selectedRecord {
-            RecordDetailView(record: record)
-        } else {
-            placeholderView
+        Group {
+            if appState.selectedMainTab == .settings {
+                SettingsContentView(selectedSection: selectedSettingsSection)
+                    .environmentObject(appState)
+                    .transition(.opacity.combined(with: .move(edge: .trailing)))
+            } else if let record = selectedRecord {
+                RecordDetailView(record: record)
+                    .id(record.id)
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .scale(scale: 0.98)),
+                        removal: .opacity
+                    ))
+            } else {
+                placeholderView
+                    .transition(.opacity)
+            }
         }
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: appState.selectedMainTab)
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: selectedRecord?.id)
     }
     
     private var placeholderView: some View {
-        VStack(spacing: 28) {
-            ZStack {
-                // Multi-layer gradient glow
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [.accentColor.opacity(0.12), .purple.opacity(0.08), .clear],
-                            center: .center,
-                            startRadius: 0,
-                            endRadius: 80
-                        )
-                    )
-                    .frame(width: 180, height: 180)
-                    .blur(radius: 30)
+        homeOverviewView
+    }
+    
+    private var homeOverviewView: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                HeroTimeSavedCard(
+                    timeSaved: historyService.timeSavedMinutes,
+                    formattedTime: formatTimeSaved(historyService.timeSavedMinutes)
+                )
                 
-                Image(systemName: "waveform.circle")
-                    .font(.system(size: 56, weight: .ultraLight))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [.secondary.opacity(0.5), .secondary.opacity(0.3)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-            }
-            
-            VStack(spacing: 12) {
-                Text("Select a Transcription")
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundStyle(.secondary)
+                SpeedComparisonCard(
+                    voiceWPM: historyService.voiceWPM,
+                    typingWPM: TranscriptionHistoryService.typingWPM,
+                    speedMultiplier: historyService.averageSpeedMultiplier,
+                    formattedSpeed: formatSpeedMultiplier(historyService.averageSpeedMultiplier)
+                )
                 
-                HStack(spacing: 8) {
-                    Image(systemName: "globe")
-                        .font(.system(size: 11))
-                    Text("fn + Space")
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                HStack(spacing: 12) {
+                    CompactStatCard(
+                        title: "Total Words",
+                        value: formatWordCount(historyService.totalWords),
+                        icon: "text.word.spacing",
+                        accentColor: .purple
+                    )
+                    
+                    CompactStatCard(
+                        title: "Today",
+                        value: "\(historyService.todayCount)",
+                        subtitle: historyService.todayWords > 0 ? "\(formatWordCount(historyService.todayWords)) words" : nil,
+                        icon: "sun.max.fill",
+                        accentColor: .orange
+                    )
                 }
-                .foregroundStyle(.secondary.opacity(0.8))
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .glassEffect(.regular, in: .capsule)
+                
+                WeeklyActivityChart(
+                    stats: historyService.weeklyStats,
+                    maxWords: historyService.maxDailyWords
+                )
+                
+                QuickStartCard()
             }
+            .padding(20)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(nsColor: .windowBackgroundColor))
@@ -455,6 +556,17 @@ struct RecordRow: View {
 struct RecordDetailView: View {
     let record: TranscriptionRecord
     
+    private var isLocalMode: Bool {
+        let localProviders = ["sherpa", "apple", "local"]
+        return localProviders.contains(where: { record.sttProvider.lowercased().contains($0) })
+    }
+    
+    private var recordWPM: Double {
+        let totalDuration = record.sttDuration + (record.llmDuration ?? 0)
+        guard totalDuration > 0.5 else { return 0 }
+        return Double(record.wordCount) / (totalDuration / 60.0)
+    }
+    
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
@@ -485,7 +597,7 @@ struct RecordDetailView: View {
                     )
                 }
                 
-                metadataSection
+                performanceSection
             }
             .padding(28)
         }
@@ -506,22 +618,39 @@ struct RecordDetailView: View {
     // MARK: - Header Section
     
     private var headerSection: some View {
-        HStack(alignment: .center) {
-            // Date/Time with elegant styling
-            VStack(alignment: .leading, spacing: 4) {
-                Text(record.timestamp, style: .date)
-                    .font(.system(size: 18, weight: .semibold))
-                Text(record.timestamp, style: .time)
-                    .font(.system(size: 13))
-                    .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(record.timestamp, style: .date)
+                        .font(.system(size: 18, weight: .semibold))
+                    Text(record.timestamp, style: .time)
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
+                }
+                
+                Spacer()
+                
+                HStack(spacing: 6) {
+                    Image(systemName: isLocalMode ? "desktopcomputer" : "cloud")
+                        .font(.system(size: 10))
+                    Text(isLocalMode ? "Local" : "Cloud")
+                        .font(.system(size: 11, weight: .medium))
+                }
+                .foregroundStyle(isLocalMode ? .green : .blue)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(
+                    (isLocalMode ? Color.green : Color.blue).opacity(0.12),
+                    in: Capsule()
+                )
             }
             
-            Spacer()
-            
-            // Stats badges
-            HStack(spacing: 8) {
-                StatBadge(value: "\(record.characterCount)", label: "chars", icon: "character.cursor.ibeam")
-                StatBadge(value: record.formattedDuration, label: "duration", icon: "timer")
+            HStack(spacing: 12) {
+                DetailStatPill(value: "\(record.wordCount)", label: "words", icon: "text.word.spacing")
+                DetailStatPill(value: "\(record.characterCount)", label: "chars", icon: "character.cursor.ibeam")
+                if recordWPM > 0 {
+                    DetailStatPill(value: "\(Int(recordWPM))", label: "WPM", icon: "bolt.fill", highlight: recordWPM > 100)
+                }
             }
         }
         .padding(.bottom, 4)
@@ -572,26 +701,87 @@ struct RecordDetailView: View {
         }
     }
     
-    // MARK: - Metadata Section
+    // MARK: - Performance Section
     
-    private var metadataSection: some View {
+    private var performanceSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Processing Details")
-                .font(.system(size: 11, weight: .semibold))
+            Text("PERFORMANCE")
+                .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(.tertiary)
-                .textCase(.uppercase)
                 .tracking(0.5)
             
-            HStack(spacing: 16) {
-                MetadataChip(icon: "waveform", label: "Provider", value: record.sttProvider)
-                MetadataChip(icon: "clock.arrow.circlepath", label: "STT", value: String(format: "%.2fs", record.sttDuration))
+            VStack(spacing: 0) {
+                performanceRow(
+                    icon: "waveform",
+                    label: "Speech Recognition",
+                    value: record.sttProvider.capitalized,
+                    timing: String(format: "%.2fs", record.sttDuration),
+                    color: .orange
+                )
+                
                 if let llm = record.llmDuration {
-                    MetadataChip(icon: "sparkles", label: "LLM", value: String(format: "%.2fs", llm))
+                    Divider()
+                        .padding(.leading, 36)
+                    
+                    performanceRow(
+                        icon: "sparkles",
+                        label: "LLM Enhancement",
+                        value: "Enabled",
+                        timing: String(format: "%.2fs", llm),
+                        color: .purple
+                    )
                 }
+                
+                Divider()
+                    .padding(.leading, 36)
+                
+                HStack {
+                    Image(systemName: "timer")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 24)
+                    
+                    Text("Total Processing")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                    
+                    Spacer()
+                    
+                    Text(record.formattedDuration)
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                }
+                .padding(.vertical, 10)
+                .padding(.horizontal, 12)
             }
+            .background(.secondary.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
         }
-        .padding(16)
-        .glassEffect(.regular, in: .rect(cornerRadius: 14))
+    }
+    
+    private func performanceRow(icon: String, label: String, value: String, timing: String, color: Color) -> some View {
+        HStack {
+            Image(systemName: icon)
+                .font(.system(size: 12))
+                .foregroundStyle(color)
+                .frame(width: 24)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.system(size: 12))
+                Text(value)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+            
+            Spacer()
+            
+            Text(timing)
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 12)
     }
     
     private func copyToClipboard(_ text: String) {
@@ -628,26 +818,495 @@ struct StatBadge: View {
     }
 }
 
-struct MetadataChip: View {
-    let icon: String
-    let label: String
+struct DetailStatPill: View {
     let value: String
+    let label: String
+    let icon: String
+    var highlight: Bool = false
     
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 5) {
             Image(systemName: icon)
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 10))
+                .foregroundStyle(highlight ? .orange : .secondary)
             
-            VStack(alignment: .leading, spacing: 2) {
-                Text(label)
-                    .font(.system(size: 9))
-                    .foregroundStyle(.tertiary)
-                Text(value)
+            Text(value)
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(highlight ? .orange : .primary)
+            
+            Text(label)
+                .font(.system(size: 10))
+                .foregroundStyle(.tertiary)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(.secondary.opacity(0.08), in: Capsule())
+    }
+}
+
+struct HeroTimeSavedCard: View {
+    let timeSaved: Double
+    let formattedTime: String
+    @State private var isHovered = false
+    
+    private var heroValue: String {
+        if timeSaved < 1 {
+            return "0"
+        } else if timeSaved < 60 {
+            return String(format: "%.0f", timeSaved)
+        } else {
+            return String(format: "%.1f", timeSaved / 60)
+        }
+    }
+    
+    private var heroUnit: String {
+        if timeSaved < 60 {
+            return timeSaved == 1 ? "minute" : "minutes"
+        } else {
+            let hours = timeSaved / 60
+            return hours == 1 ? "hour" : "hours"
+        }
+    }
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("TIME SAVED")
+                        .font(.system(size: 10, weight: .semibold, design: .rounded))
+                        .tracking(1.5)
+                        .foregroundStyle(.white.opacity(0.7))
+                    Text("by using voice instead of typing")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.white.opacity(0.5))
+                }
+                Spacer()
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.system(size: 20, weight: .light))
+                    .foregroundStyle(.white.opacity(0.6))
+            }
+            
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(heroValue)
+                    .font(.system(size: 72, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(.white)
+                    .contentTransition(.numericText())
+                
+                Text(heroUnit)
+                    .font(.system(size: 20, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.7))
+                
+                Spacer()
+            }
+            
+            HStack(spacing: 8) {
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.8))
+                Text("That's \(formattedTime) you've gained back")
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.7))
+                Spacer()
             }
         }
+        .padding(20)
+        .background {
+            ZStack {
+                LinearGradient(
+                    colors: [
+                        Color(hue: 0.38, saturation: 0.65, brightness: 0.55),
+                        Color(hue: 0.45, saturation: 0.70, brightness: 0.40)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [.white.opacity(0.15), .clear],
+                            center: .topTrailing,
+                            startRadius: 0,
+                            endRadius: 150
+                        )
+                    )
+                    .offset(x: 60, y: -40)
+                
+                RoundedRectangle(cornerRadius: 16)
+                    .strokeBorder(.white.opacity(0.1), lineWidth: 1)
+            }
+        }
+        .clipShape(.rect(cornerRadius: 16))
+        .shadow(color: Color(hue: 0.40, saturation: 0.50, brightness: 0.30).opacity(0.3), radius: isHovered ? 20 : 12, y: isHovered ? 8 : 4)
+        .scaleEffect(isHovered ? 1.01 : 1.0)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isHovered)
+        .onHover { hovering in
+            isHovered = hovering
+        }
+    }
+}
+
+struct SpeedComparisonCard: View {
+    let voiceWPM: Double
+    let typingWPM: Double
+    let speedMultiplier: Double
+    let formattedSpeed: String
+    @State private var isHovered = false
+    @State private var animateProgress = false
+    
+    private var typingProgress: Double {
+        min(typingWPM / max(voiceWPM, 1), 1.0)
+    }
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("INPUT SPEED")
+                        .font(.system(size: 10, weight: .semibold, design: .rounded))
+                        .tracking(1.5)
+                        .foregroundStyle(.secondary)
+                    Text("Words per minute (WPM)")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
+                }
+                Spacer()
+                
+                if speedMultiplier > 0 {
+                    HStack(spacing: 4) {
+                        Text(formattedSpeed)
+                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundStyle(speedMultiplier >= 2.0 ? Color.orange : .primary)
+                        Text("faster")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            
+            VStack(spacing: 10) {
+                HStack(spacing: 12) {
+                    Image(systemName: "waveform")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.orange)
+                        .frame(width: 20)
+                    
+                    Text("Voice")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.primary)
+                        .frame(width: 45, alignment: .leading)
+                    
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule()
+                                .fill(.secondary.opacity(0.15))
+                            
+                            Capsule()
+                                .fill(
+                                    LinearGradient(
+                                        colors: [.orange, .orange.opacity(0.7)],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .frame(width: animateProgress ? geo.size.width : 0)
+                        }
+                    }
+                    .frame(height: 8)
+                    
+                    Text(voiceWPM > 0 ? "\(Int(voiceWPM))" : "-")
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(.orange)
+                        .frame(width: 36, alignment: .trailing)
+                }
+                
+                HStack(spacing: 12) {
+                    Image(systemName: "keyboard")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 20)
+                    
+                    Text("Typing")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 45, alignment: .leading)
+                    
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule()
+                                .fill(.secondary.opacity(0.15))
+                            
+                            Capsule()
+                                .fill(.secondary.opacity(0.4))
+                                .frame(width: animateProgress ? geo.size.width * typingProgress : 0)
+                        }
+                    }
+                    .frame(height: 8)
+                    
+                    Text("\(Int(typingWPM))")
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                        .frame(width: 36, alignment: .trailing)
+                }
+            }
+            
+            Text("Typing baseline: average 40 WPM")
+                .font(.system(size: 10))
+                .foregroundStyle(.tertiary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(16)
+        .background(.secondary.opacity(0.06), in: RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(.secondary.opacity(isHovered ? 0.15 : 0.08), lineWidth: 1)
+        )
+        .scaleEffect(isHovered ? 1.005 : 1.0)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isHovered)
+        .onHover { hovering in
+            isHovered = hovering
+        }
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.8).delay(0.2)) {
+                animateProgress = true
+            }
+        }
+    }
+}
+
+struct CompactStatCard: View {
+    let title: String
+    let value: String
+    var subtitle: String? = nil
+    let icon: String
+    let accentColor: Color
+    @State private var isHovered = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                ZStack {
+                    Circle()
+                        .fill(accentColor.opacity(0.15))
+                        .frame(width: 28, height: 28)
+                    Image(systemName: icon)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(accentColor)
+                }
+                Spacer()
+            }
+            
+            Spacer()
+            
+            VStack(alignment: .leading, spacing: 3) {
+                Text(value)
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(.primary)
+                
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+                    if let subtitle = subtitle {
+                        Text(subtitle)
+                            .font(.system(size: 10))
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: 110)
+        .background(.secondary.opacity(0.06), in: RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(accentColor.opacity(isHovered ? 0.25 : 0), lineWidth: 1)
+        )
+        .scaleEffect(isHovered ? 1.02 : 1.0)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isHovered)
+        .onHover { hovering in
+            isHovered = hovering
+        }
+    }
+}
+
+struct WeeklyActivityChart: View {
+    let stats: [TranscriptionHistoryService.DailyStats]
+    let maxWords: Int
+    @State private var animateBars = false
+    @State private var isHovered = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Text("This Week")
+                    .font(.system(size: 13, weight: .semibold))
+                Spacer()
+                Text("\(stats.reduce(0) { $0 + $1.words }) words")
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+            }
+            
+            HStack(alignment: .bottom, spacing: 8) {
+                ForEach(Array(stats.enumerated()), id: \.element.id) { index, day in
+                    VStack(spacing: 6) {
+                        ZStack(alignment: .bottom) {
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(.secondary.opacity(0.1))
+                                .frame(height: 80)
+                            
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(
+                                    day.isToday
+                                        ? LinearGradient(colors: [.accentColor, .accentColor.opacity(0.7)], startPoint: .top, endPoint: .bottom)
+                                        : LinearGradient(colors: [.secondary.opacity(0.4), .secondary.opacity(0.25)], startPoint: .top, endPoint: .bottom)
+                                )
+                                .frame(height: animateBars ? barHeight(for: day) : 0)
+                        }
+                        .frame(height: 80)
+                        
+                        Text(day.dayLabel)
+                            .font(.system(size: 9, weight: day.isToday ? .bold : .medium))
+                            .foregroundStyle(day.isToday ? .primary : .tertiary)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            
+            HStack(spacing: 16) {
+                legendItem(color: .accentColor, label: "Today")
+                legendItem(color: .secondary.opacity(0.4), label: "This week")
+            }
+        }
+        .padding(16)
+        .background(.secondary.opacity(0.06), in: RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(.secondary.opacity(isHovered ? 0.15 : 0.08), lineWidth: 1)
+        )
+        .scaleEffect(isHovered ? 1.005 : 1.0)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isHovered)
+        .onHover { hovering in
+            isHovered = hovering
+        }
+        .onAppear {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.7).delay(0.1)) {
+                animateBars = true
+            }
+        }
+    }
+    
+    private func barHeight(for day: TranscriptionHistoryService.DailyStats) -> CGFloat {
+        guard maxWords > 0 else { return 4 }
+        let ratio = CGFloat(day.words) / CGFloat(maxWords)
+        return max(4, ratio * 80)
+    }
+    
+    private func legendItem(color: Color, label: String) -> some View {
+        HStack(spacing: 5) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(color)
+                .frame(width: 10, height: 10)
+            Text(label)
+                .font(.system(size: 10))
+                .foregroundStyle(.tertiary)
+        }
+    }
+}
+
+struct QuickStartCard: View {
+    @State private var isHovered = false
+    
+    var body: some View {
+        HStack(spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [.accentColor.opacity(0.2), .accentColor.opacity(0.1)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 44, height: 44)
+                
+                Image(systemName: "mic.fill")
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(Color.accentColor)
+            }
+            
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Start Dictating")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.primary)
+                
+                HStack(spacing: 6) {
+                    KeyCapView(text: "fn")
+                    Text("+")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.tertiary)
+                    KeyCapView(text: "Space")
+                    Text("anywhere")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            
+            Spacer()
+            
+            Image(systemName: "arrow.right.circle.fill")
+                .font(.system(size: 20))
+                .foregroundStyle(.secondary.opacity(0.4))
+        }
+        .padding(16)
+        .background {
+            RoundedRectangle(cornerRadius: 14)
+                .fill(.secondary.opacity(0.04))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [.secondary.opacity(0.12), .secondary.opacity(0.06)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1
+                        )
+                )
+        }
+        .scaleEffect(isHovered ? 1.01 : 1.0)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isHovered)
+        .onHover { hovering in
+            isHovered = hovering
+        }
+    }
+}
+
+struct KeyCapView: View {
+    let text: String
+    
+    var body: some View {
+        Text(text)
+            .font(.system(size: 10, weight: .medium, design: .rounded))
+            .foregroundStyle(.primary.opacity(0.8))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background {
+                RoundedRectangle(cornerRadius: 5)
+                    .fill(.secondary.opacity(0.12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 5)
+                            .strokeBorder(.secondary.opacity(0.15), lineWidth: 0.5)
+                    )
+                    .shadow(color: .black.opacity(0.08), radius: 1, y: 1)
+            }
     }
 }
 

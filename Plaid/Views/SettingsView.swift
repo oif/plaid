@@ -17,18 +17,16 @@ struct SettingsContentView: View {
     
     @State private var newVocabWord = ""
     @State private var showModelError: String?
-    @State private var editingMode: Mode?
-    @State private var showModeEditor = false
     
     var body: some View {
         Group {
             switch selectedSection {
             case .general:
                 generalTab
-            case .services:
-                servicesTab
-            case .modes:
-                modesTab
+            case .speech:
+                speechTab
+            case .integrations:
+                integrationsTab
             case .about:
                 aboutTab
             }
@@ -120,7 +118,7 @@ struct SettingsContentView: View {
         .padding()
     }
     
-    private var servicesTab: some View {
+    private var speechTab: some View {
         ScrollView {
             VStack(spacing: 24) {
                 processingModeSection
@@ -259,6 +257,40 @@ struct SettingsContentView: View {
                             TextField("Model", text: $settings.llmModel)
                                 .textFieldStyle(.roundedBorder)
                         }
+                        
+                        Divider()
+                            .padding(.vertical, 4)
+                        
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text("Custom Prompt")
+                                    .font(.system(size: 12, weight: .medium))
+                                Spacer()
+                                if settings.customPrompt != AppSettings.defaultPrompt {
+                                    Button("Reset") {
+                                        settings.customPrompt = AppSettings.defaultPrompt
+                                    }
+                                    .font(.system(size: 11))
+                                    .buttonStyle(.plain)
+                                    .foregroundStyle(.secondary)
+                                }
+                            }
+                            
+                            TextEditor(text: $settings.customPrompt)
+                                .font(.system(size: 12, design: .monospaced))
+                                .frame(minHeight: 80)
+                                .scrollContentBackground(.hidden)
+                                .padding(8)
+                                .background(.secondary.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .strokeBorder(.secondary.opacity(0.2), lineWidth: 1)
+                                )
+                            
+                            Text("Use {{text}} for transcribed text")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.tertiary)
+                        }
                     }
                     .padding()
                 }
@@ -325,74 +357,38 @@ struct SettingsContentView: View {
         }
     }
     
-    private var modesTab: some View {
-        Form {
-            Section("Default Mode") {
-                Picker("Default", selection: $settings.defaultModeId) {
-                    ForEach(settings.allModes) { mode in
-                        HStack {
-                            Text(mode.icon)
-                            Text(mode.name)
-                        }
-                        .tag(mode.id)
-                    }
-                }
-            }
-            
-            Section {
-                ForEach(Mode.builtinModes) { mode in
-                    ModeListRow(mode: mode, isBuiltin: true, isDefault: mode.id == settings.defaultModeId) { }
-                }
-            } header: {
-                Text("Built-in Modes")
-            }
-            
-            Section {
-                ForEach(settings.customModes) { mode in
-                    ModeListRow(mode: mode, isBuiltin: false, isDefault: mode.id == settings.defaultModeId) {
-                        editingMode = mode
-                        showModeEditor = true
-                    }
-                    .contextMenu {
-                        Button("Edit") {
-                            editingMode = mode
-                            showModeEditor = true
-                        }
-                        Button("Set as Default") {
-                            settings.defaultModeId = mode.id
-                        }
-                        Divider()
-                        Button("Delete", role: .destructive) {
-                            settings.customModes.removeAll { $0.id == mode.id }
-                        }
-                    }
-                }
-                .onDelete { indexSet in
-                    settings.customModes.remove(atOffsets: indexSet)
-                }
+    private var integrationsTab: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                Text("Connect Plaid to powerful third-party services")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
                 
-                Button {
-                    editingMode = nil
-                    showModeEditor = true
-                } label: {
-                    Label("Add Mode", systemImage: "plus")
-                }
-            } header: {
-                Text("Custom Modes")
+                IntegrationCard(
+                    icon: "sparkles",
+                    iconColor: .purple,
+                    title: "Claude Agent",
+                    description: "Voice-controlled autonomous AI for research, analysis, and complex tasks",
+                    status: .comingSoon
+                )
+                
+                IntegrationCard(
+                    icon: "macwindow.on.rectangle",
+                    iconColor: .blue,
+                    title: "Computer Use",
+                    description: "Control your Mac with voice — open apps, click, navigate",
+                    status: .comingSoon
+                )
+                
+                IntegrationCard(
+                    icon: "server.rack",
+                    iconColor: .cyan,
+                    title: "MCP Servers",
+                    description: "Connect to Model Context Protocol servers for extended capabilities",
+                    status: .comingSoon
+                )
             }
-        }
-        .formStyle(.grouped)
-        .padding()
-        .sheet(isPresented: $showModeEditor) {
-            ModeEditorView(mode: editingMode) { savedMode in
-                if let existing = editingMode {
-                    if let index = settings.customModes.firstIndex(where: { $0.id == existing.id }) {
-                        settings.customModes[index] = savedMode
-                    }
-                } else {
-                    settings.customModes.append(savedMode)
-                }
-            }
+            .padding(16)
         }
     }
     
@@ -452,188 +448,81 @@ struct SettingsContentView: View {
     }
 }
 
-struct ModeListRow: View {
-    let mode: Mode
-    let isBuiltin: Bool
-    var isDefault: Bool = false
-    let onTap: () -> Void
-    
-    var body: some View {
-        Button(action: onTap) {
-            HStack(spacing: 12) {
-                Text(mode.icon)
-                    .font(.title2)
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 6) {
-                        Text(mode.name)
-                            .font(.body)
-                        if isDefault {
-                            Text("Default")
-                                .font(.caption2)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(.accent.opacity(0.15), in: Capsule())
-                                .foregroundStyle(.accent)
-                        }
-                    }
-                    
-                    HStack(spacing: 8) {
-                        if mode.skipLLM {
-                            Label("No LLM", systemImage: "bolt.slash")
-                        }
-                        if mode.useSelectedText {
-                            Label("Uses Selection", systemImage: "text.cursor")
-                        }
-                    }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                }
-                
-                Spacer()
-                
-                if isBuiltin {
-                    Text("Built-in")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                }
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .disabled(isBuiltin)
-    }
+enum IntegrationStatus {
+    case available
+    case comingSoon
+    case beta
 }
 
-struct ModeEditorView: View {
-    let mode: Mode?
-    let onSave: (Mode) -> Void
+struct IntegrationCard: View {
+    let icon: String
+    let iconColor: Color
+    let title: String
+    let description: String
+    let status: IntegrationStatus
     
-    @Environment(\.dismiss) private var dismiss
-    
-    @State private var name: String = ""
-    @State private var icon: String = "🔮"
-    @State private var systemPrompt: String = ""
-    @State private var skipLLM: Bool = false
-    @State private var useSelectedText: Bool = false
-    
-    private let emojiOptions = ["🔮", "💬", "✍️", "🎯", "🔥", "💡", "🎨", "🤖", "📝", "🌟", "⚡️", "🎭"]
+    @State private var isHovered = false
     
     var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Button("Cancel") { dismiss() }
-                    .buttonStyle(.plain)
-                Spacer()
-                Text(mode == nil ? "New Mode" : "Edit Mode")
-                    .font(.headline)
-                Spacer()
-                Button("Save") { saveMode() }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(name.isEmpty || (!skipLLM && systemPrompt.isEmpty))
-            }
-            .padding()
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 20))
+                .foregroundStyle(iconColor.opacity(0.8))
+                .frame(width: 36, height: 36)
+                .background(iconColor.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
             
-            Divider()
-            
-            Form {
-                Section("Basic Info") {
-                    TextField("Name", text: $name)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(title)
+                        .font(.system(size: 13, weight: .medium))
                     
-                    HStack {
-                        Text("Icon")
-                        Spacer()
-                        HStack(spacing: 8) {
-                            ForEach(emojiOptions, id: \.self) { emoji in
-                                Button {
-                                    icon = emoji
-                                } label: {
-                                    Text(emoji)
-                                        .font(.title2)
-                                        .padding(4)
-                                        .background(icon == emoji ? Color.accentColor.opacity(0.3) : Color.clear)
-                                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                    }
+                    statusBadge
                 }
                 
-                Section("Behavior") {
-                    Toggle("Skip LLM processing", isOn: $skipLLM)
-                    Toggle("Use selected text as context", isOn: $useSelectedText)
-                }
-                
-                if !skipLLM {
-                    Section {
-                        TextEditor(text: $systemPrompt)
-                            .frame(minHeight: 120)
-                            .font(.body.monospaced())
-                        
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Available variables:")
-                                .font(.caption)
-                                .fontWeight(.medium)
-                            
-                            HStack(spacing: 16) {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("{{voice_input}}")
-                                        .font(.caption.monospaced())
-                                        .padding(.horizontal, 6)
-                                        .padding(.vertical, 2)
-                                        .background(.secondary.opacity(0.1), in: RoundedRectangle(cornerRadius: 4))
-                                    Text("Voice transcription")
-                                        .font(.caption2)
-                                        .foregroundStyle(.secondary)
-                                }
-                                
-                                if useSelectedText {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text("{{selected_text}}")
-                                            .font(.caption.monospaced())
-                                            .padding(.horizontal, 6)
-                                            .padding(.vertical, 2)
-                                            .background(.secondary.opacity(0.1), in: RoundedRectangle(cornerRadius: 4))
-                                        Text("Text selected before activation")
-                                            .font(.caption2)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                }
-                            }
-                        }
-                        .padding(.top, 4)
-                    } header: {
-                        Text("System Prompt")
-                    }
-                }
+                Text(description)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
             }
-            .formStyle(.grouped)
+            
+            Spacer()
+            
+            if status == .available {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.tertiary)
+            }
         }
-        .frame(width: 500, height: 480)
-        .onAppear {
-            if let mode = mode {
-                name = mode.name
-                icon = mode.icon
-                systemPrompt = mode.systemPrompt ?? ""
-                skipLLM = mode.skipLLM
-                useSelectedText = mode.useSelectedText
+        .padding(12)
+        .background(isHovered ? Color.secondary.opacity(0.08) : Color.secondary.opacity(0.04), in: RoundedRectangle(cornerRadius: 10))
+        .contentShape(Rectangle())
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isHovered = hovering
             }
         }
     }
     
-    private func saveMode() {
-        let newMode = Mode(
-            id: mode?.id ?? UUID().uuidString,
-            name: name,
-            icon: icon,
-            systemPrompt: skipLLM ? nil : systemPrompt,
-            skipLLM: skipLLM,
-            useSelectedText: useSelectedText,
-            isBuiltin: false
-        )
-        onSave(newMode)
-        dismiss()
+    @ViewBuilder
+    private var statusBadge: some View {
+        switch status {
+        case .available:
+            EmptyView()
+        case .comingSoon:
+            Text("Coming soon")
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(.orange)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(.orange.opacity(0.15), in: Capsule())
+        case .beta:
+            Text("Beta")
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(.blue)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(.blue.opacity(0.15), in: Capsule())
+        }
     }
 }
 

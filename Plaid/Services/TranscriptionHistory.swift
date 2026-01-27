@@ -33,6 +33,10 @@ final class TranscriptionRecord {
         correctedText ?? originalText
     }
     
+    var wordCount: Int {
+        displayText.split(whereSeparator: { $0.isWhitespace || $0.isNewline }).count
+    }
+    
     var formattedTimestamp: String {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
@@ -148,5 +152,95 @@ class TranscriptionHistoryService: ObservableObject {
     
     var totalCharacters: Int {
         recentRecords.reduce(0) { $0 + $1.characterCount }
+    }
+    
+    var totalWords: Int {
+        recentRecords.reduce(0) { $0 + $1.wordCount }
+    }
+    
+    var todayWords: Int {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        return recentRecords
+            .filter { calendar.isDate($0.timestamp, inSameDayAs: today) }
+            .reduce(0) { $0 + $1.wordCount }
+    }
+    
+    var todayWPM: Double {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let todayRecords = recentRecords.filter { calendar.isDate($0.timestamp, inSameDayAs: today) }
+        let totalDurationMinutes = todayRecords.reduce(0.0) { $0 + $1.sttDuration + ($1.llmDuration ?? 0) } / 60.0
+        guard totalDurationMinutes > 0.01 else { return 0 }
+        return Double(todayWords) / totalDurationMinutes
+    }
+    
+    var todayUsageSeconds: Double {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        return recentRecords
+            .filter { calendar.isDate($0.timestamp, inSameDayAs: today) }
+            .reduce(0.0) { $0 + $1.sttDuration + ($1.llmDuration ?? 0) }
+    }
+    
+    var timeSavedMinutes: Double {
+        let typingMinutes = Double(totalWords) / Self.typingWPM
+        let actualMinutes = recentRecords.reduce(0.0) { $0 + $1.sttDuration + ($1.llmDuration ?? 0) } / 60.0
+        return max(0, typingMinutes - actualMinutes)
+    }
+    
+    static let typingWPM: Double = 40.0
+    
+    var voiceWPM: Double {
+        let totalDurationMinutes = recentRecords.reduce(0.0) { $0 + $1.sttDuration + ($1.llmDuration ?? 0) } / 60.0
+        guard totalDurationMinutes > 0.01 else { return 0 }
+        return Double(totalWords) / totalDurationMinutes
+    }
+    
+    var averageSpeedMultiplier: Double {
+        guard voiceWPM > 0 else { return 0 }
+        return voiceWPM / Self.typingWPM
+    }
+    
+    // MARK: - Weekly Stats
+    
+    struct DailyStats: Identifiable {
+        let id = UUID()
+        let date: Date
+        let words: Int
+        let sessions: Int
+        let usageSeconds: Double
+        
+        var dayLabel: String {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "E"
+            return formatter.string(from: date)
+        }
+        
+        var isToday: Bool {
+            Calendar.current.isDateInToday(date)
+        }
+    }
+    
+    var weeklyStats: [DailyStats] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        
+        return (0..<7).reversed().map { daysAgo in
+            guard let date = calendar.date(byAdding: .day, value: -daysAgo, to: today) else {
+                return DailyStats(date: today, words: 0, sessions: 0, usageSeconds: 0)
+            }
+            
+            let dayRecords = recentRecords.filter { calendar.isDate($0.timestamp, inSameDayAs: date) }
+            let words = dayRecords.reduce(0) { $0 + $1.wordCount }
+            let sessions = dayRecords.count
+            let usage = dayRecords.reduce(0.0) { $0 + $1.sttDuration + ($1.llmDuration ?? 0) }
+            
+            return DailyStats(date: date, words: words, sessions: sessions, usageSeconds: usage)
+        }
+    }
+    
+    var maxDailyWords: Int {
+        weeklyStats.map(\.words).max() ?? 1
     }
 }

@@ -8,6 +8,12 @@ extension Notification.Name {
 class AppSettings: ObservableObject {
     static let shared = AppSettings()
     
+    static let defaultPrompt = """
+Fix transcription errors, grammar, and punctuation. Keep the original meaning, tone, and language.
+
+{{text}}
+"""
+    
     private let defaults = UserDefaults.standard
     
     // MARK: - STT Settings
@@ -53,6 +59,10 @@ class AppSettings: ObservableObject {
     
     @Published var enableLLMCorrection: Bool {
         didSet { defaults.set(enableLLMCorrection, forKey: "enableLLMCorrection") }
+    }
+    
+    @Published var customPrompt: String {
+        didSet { defaults.set(customPrompt, forKey: "customPrompt") }
     }
     
     @Published var llmProvider: LLMProvider {
@@ -149,6 +159,7 @@ class AppSettings: ObservableObject {
         
         // LLM
         self.enableLLMCorrection = defaults.object(forKey: "enableLLMCorrection") as? Bool ?? true
+        self.customPrompt = defaults.string(forKey: "customPrompt") ?? AppSettings.defaultPrompt
         let llmProv = defaults.string(forKey: "llmProvider") ?? "openai"
         self.llmProvider = LLMProvider(rawValue: llmProv) ?? .openAI
         self.llmModel = defaults.string(forKey: "llmModel") ?? "gpt-4o-mini"
