@@ -113,6 +113,29 @@ enum LocalModel: String, CaseIterable, Codable, Identifiable {
     }
 }
 
+// MARK: - Download Delegate
+
+private class DownloadDelegate: NSObject, URLSessionDownloadDelegate {
+    var onProgress: ((Double) -> Void)?
+    var onComplete: ((Result<URL, Error>) -> Void)?
+    
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
+        onComplete?(.success(location))
+    }
+    
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
+        guard totalBytesExpectedToWrite > 0 else { return }
+        let progress = Double(totalBytesWritten) / Double(totalBytesExpectedToWrite)
+        onProgress?(progress)
+    }
+    
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        if let error = error {
+            onComplete?(.failure(error))
+        }
+    }
+}
+
 // MARK: - Model Manager
 
 @MainActor
@@ -129,6 +152,7 @@ class ModelManager: ObservableObject {
     
     private let fileManager = FileManager.default
     private var downloadTasks: [LocalModel: URLSessionDownloadTask] = [:]
+    private var downloadDelegates: [LocalModel: DownloadDelegate] = [:]
     
     private init() {
         let savedModel = UserDefaults.standard.string(forKey: "selectedLocalModel") ?? LocalModel.sensevoiceInt8.rawValue
@@ -221,41 +245,50 @@ class ModelManager: ObservableObject {
     }
     
     private func downloadWithProgress(url: URL, model: LocalModel) async throws -> (URL, URLResponse) {
-        let request = URLRequest(url: url)
-        
-        let (asyncBytes, response) = try await URLSession.shared.bytes(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse,
-              httpResponse.statusCode == 200 else {
-            throw ModelError.downloadFailed
-        }
-        
-        let expectedLength = response.expectedContentLength
-        var receivedLength: Int64 = 0
+        let delegate = DownloadDelegate()
+        let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
         
         let tempURL = fileManager.temporaryDirectory.appendingPathComponent("\(model.rawValue).\(model.archiveFormat)")
-        
-        // Remove existing temp file if any
         try? fileManager.removeItem(at: tempURL)
         
-        fileManager.createFile(atPath: tempURL.path, contents: nil)
-        let fileHandle = try FileHandle(forWritingTo: tempURL)
-        
-        for try await byte in asyncBytes {
-            try fileHandle.write(contentsOf: [byte])
-            receivedLength += 1
+        return try await withCheckedThrowingContinuation { continuation in
+            var lastProgressUpdate: Double = 0
             
-            if expectedLength > 0 {
-                let progress = Double(receivedLength) / Double(expectedLength)
-                await MainActor.run {
-                    self.downloadProgress[model] = progress * 0.8  // 80% for download, 20% for extraction
+            delegate.onProgress = { [weak self] progress in
+                guard progress - lastProgressUpdate >= 0.01 else { return }
+                lastProgressUpdate = progress
+                Task { @MainActor in
+                    self?.downloadProgress[model] = progress * 0.8
                 }
             }
+            
+            delegate.onComplete = { [weak self] result in
+                Task { @MainActor in
+                    self?.downloadTasks.removeValue(forKey: model)
+                    self?.downloadDelegates.removeValue(forKey: model)
+                }
+                
+                switch result {
+                case .success(let location):
+                    do {
+                        try FileManager.default.moveItem(at: location, to: tempURL)
+                        continuation.resume(returning: (tempURL, URLResponse()))
+                    } catch {
+                        continuation.resume(throwing: error)
+                    }
+                case .failure(let error):
+                    continuation.resume(throwing: error)
+                }
+                session.invalidateAndCancel()
+            }
+            
+            let task = session.downloadTask(with: url)
+            Task { @MainActor in
+                self.downloadTasks[model] = task
+                self.downloadDelegates[model] = delegate
+            }
+            task.resume()
         }
-        
-        try fileHandle.close()
-        
-        return (tempURL, response)
     }
     
     private func extractArchive(at archiveURL: URL, for model: LocalModel) async throws {
