@@ -2,6 +2,9 @@ import AppKit
 import Carbon
 
 private var _lastTriggerTime: UInt64 = 0
+private var _hotkeyKeyCode: Int64 = 49
+private var _hotkeyModifiers: CGEventFlags = []
+private var _hotkeyUseFn: Bool = true
 
 @MainActor
 class GlobalHotkeyManager {
@@ -15,7 +18,30 @@ class GlobalHotkeyManager {
     
     var onHotkeyPressed: (() -> Void)?
     
-    private init() {}
+    private init() {
+        loadHotkeySettings()
+        NotificationCenter.default.addObserver(
+            forName: .hotkeyDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.loadHotkeySettings()
+        }
+    }
+    
+    private func loadHotkeySettings() {
+        let settings = AppSettings.shared
+        _hotkeyKeyCode = Int64(settings.hotkeyKeyCode)
+        _hotkeyUseFn = settings.hotkeyUseFn
+        
+        var flags: CGEventFlags = []
+        let mods = settings.hotkeyModifiers
+        if mods & (1 << 0) != 0 { flags.insert(.maskCommand) }
+        if mods & (1 << 1) != 0 { flags.insert(.maskShift) }
+        if mods & (1 << 2) != 0 { flags.insert(.maskAlternate) }
+        if mods & (1 << 3) != 0 { flags.insert(.maskControl) }
+        _hotkeyModifiers = flags
+    }
     
     nonisolated static func shouldTrigger() -> Bool {
         let now = mach_absolute_time()
@@ -53,9 +79,12 @@ class GlobalHotkeyManager {
             }
             
             let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
-            let isFnSpace = keyCode == 49 && event.flags.contains(.maskSecondaryFn)
+            let matchesKey = keyCode == _hotkeyKeyCode
+            let matchesFn = !_hotkeyUseFn || event.flags.contains(.maskSecondaryFn)
+            let matchesMods = _hotkeyModifiers.isEmpty || event.flags.contains(_hotkeyModifiers)
+            let isHotkey = matchesKey && matchesFn && matchesMods
             
-            if type == .keyDown && isFnSpace {
+            if type == .keyDown && isHotkey {
                 guard GlobalHotkeyManager.shouldTrigger() else {
                     return nil
                 }

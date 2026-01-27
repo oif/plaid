@@ -1,6 +1,10 @@
 import Foundation
 import SwiftUI
 
+extension Notification.Name {
+    static let hotkeyDidChange = Notification.Name("hotkeyDidChange")
+}
+
 class AppSettings: ObservableObject {
     static let shared = AppSettings()
     
@@ -84,6 +88,29 @@ class AppSettings: ObservableObject {
         didSet { defaults.set(customVocabulary, forKey: "customVocabulary") }
     }
     
+    // MARK: - Hotkey Settings
+    
+    @Published var hotkeyKeyCode: Int {
+        didSet { 
+            defaults.set(hotkeyKeyCode, forKey: "hotkeyKeyCode")
+            NotificationCenter.default.post(name: .hotkeyDidChange, object: nil)
+        }
+    }
+    
+    @Published var hotkeyModifiers: Int {
+        didSet { 
+            defaults.set(hotkeyModifiers, forKey: "hotkeyModifiers")
+            NotificationCenter.default.post(name: .hotkeyDidChange, object: nil)
+        }
+    }
+    
+    @Published var hotkeyUseFn: Bool {
+        didSet { 
+            defaults.set(hotkeyUseFn, forKey: "hotkeyUseFn")
+            NotificationCenter.default.post(name: .hotkeyDidChange, object: nil)
+        }
+    }
+    
     // MARK: - Mode Settings
     
     @Published var customModes: [Mode] {
@@ -135,6 +162,11 @@ class AppSettings: ObservableObject {
             self.customModes = []
         }
         self.lastSelectedModeId = defaults.string(forKey: "lastSelectedModeId") ?? Mode.defaultMode.id
+        
+        let spaceKeyCode = 49
+        self.hotkeyKeyCode = defaults.object(forKey: "hotkeyKeyCode") as? Int ?? spaceKeyCode
+        self.hotkeyModifiers = defaults.object(forKey: "hotkeyModifiers") as? Int ?? 0
+        self.hotkeyUseFn = defaults.object(forKey: "hotkeyUseFn") as? Bool ?? true
     }
     
     // MARK: - Computed Properties
