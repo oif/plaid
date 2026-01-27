@@ -75,6 +75,7 @@ struct TabButton: View {
             .foregroundStyle(isSelected ? .primary : .secondary)
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
+            .contentShape(Capsule())
             .background {
                 if isSelected {
                     Capsule()
@@ -84,7 +85,6 @@ struct TabButton: View {
             }
         }
         .buttonStyle(.plain)
-        .contentShape(Capsule())
     }
 }
 
