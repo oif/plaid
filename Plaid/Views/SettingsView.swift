@@ -25,10 +25,8 @@ struct SettingsContentView: View {
             switch selectedSection {
             case .general:
                 generalTab
-            case .speech:
-                speechTab
-            case .ai:
-                aiTab
+            case .services:
+                servicesTab
             case .modes:
                 modesTab
             case .about:
@@ -51,6 +49,18 @@ struct SettingsContentView: View {
         Form {
             Section {
                 Toggle("Auto-inject text after recording", isOn: $settings.autoInject)
+                
+                Picker("Language", selection: $settings.language) {
+                    Text("English (US)").tag("en-US")
+                    Text("English (UK)").tag("en-GB")
+                    Text("Chinese (Simplified)").tag("zh-CN")
+                    Text("Chinese (Traditional)").tag("zh-TW")
+                    Text("Japanese").tag("ja-JP")
+                    Text("Korean").tag("ko-KR")
+                    Text("Spanish").tag("es-ES")
+                    Text("French").tag("fr-FR")
+                    Text("German").tag("de-DE")
+                }
                 
                 HStack {
                     Text("Accessibility Permission")
@@ -82,13 +92,7 @@ struct SettingsContentView: View {
                     )
                 }
             }
-        }
-        .formStyle(.grouped)
-        .padding()
-    }
-    
-    private var speechTab: some View {
-        Form {
+            
             Section("Audio Input") {
                 Picker("Input Device", selection: $audioInputManager.selectedDevice) {
                     ForEach(audioInputManager.availableDevices) { device in
@@ -111,272 +115,214 @@ struct SettingsContentView: View {
                 }
                 .buttonStyle(.borderless)
             }
-            
-            Section("Speech Recognition") {
-                Picker("Provider", selection: $settings.sttProvider) {
-                    ForEach(STTProvider.allCases, id: \.self) { provider in
-                        Text(provider.displayName).tag(provider)
-                    }
-                }
-                
-                Picker("Language", selection: $settings.language) {
-                    Text("English (US)").tag("en-US")
-                    Text("English (UK)").tag("en-GB")
-                    Text("Chinese (Simplified)").tag("zh-CN")
-                    Text("Chinese (Traditional)").tag("zh-TW")
-                    Text("Japanese").tag("ja-JP")
-                    Text("Korean").tag("ko-KR")
-                    Text("Spanish").tag("es-ES")
-                    Text("French").tag("fr-FR")
-                    Text("German").tag("de-DE")
-                }
-            }
-            
-            if settings.sttProvider == .sherpaLocal {
-                Section("Local Model") {
-                    Picker("Model", selection: $modelManager.selectedModel) {
-                        ForEach(LocalModel.allCases) { model in
-                            HStack {
-                                Text(model.displayName)
-                                if !modelManager.isModelAvailable(model) {
-                                    Text("(\(model.sizeDescription))")
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                            .tag(model)
-                        }
-                    }
-                    
-                    let selectedModel = modelManager.selectedModel
-                    
-                    if modelManager.isModelAvailable(selectedModel) {
-                        HStack {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(.green)
-                            Text("Ready to use")
-                                .foregroundStyle(.secondary)
-                            Spacer()
-                            if !selectedModel.isBundled {
-                                Button("Delete") {
-                                    do {
-                                        try modelManager.deleteModel(selectedModel)
-                                    } catch {
-                                        showModelError = error.localizedDescription
-                                    }
-                                }
-                                .foregroundStyle(.red)
-                            }
-                        }
-                    } else if modelManager.isModelDownloading(selectedModel) {
-                        HStack {
-                            ProgressView(value: modelManager.downloadProgress[selectedModel] ?? 0)
-                            Text("\(Int((modelManager.downloadProgress[selectedModel] ?? 0) * 100))%")
-                                .foregroundStyle(.secondary)
-                                .monospacedDigit()
-                            Button("Cancel") {
-                                modelManager.cancelDownload(selectedModel)
-                            }
-                        }
-                    } else {
-                        HStack {
-                            Text("Model not downloaded")
-                                .foregroundStyle(.secondary)
-                            Spacer()
-                            Button("Download (\(selectedModel.sizeDescription))") {
-                                Task {
-                                    do {
-                                        try await modelManager.downloadModel(selectedModel)
-                                    } catch {
-                                        showModelError = error.localizedDescription
-                                    }
-                                }
-                            }
-                            .buttonStyle(.glass)
-                        }
-                    }
-                    
-                    if let error = showModelError {
-                        Text(error)
-                            .foregroundStyle(.red)
-                            .font(.caption)
-                    }
-                }
-            }
-            
-            if settings.sttProvider == .elevenLabs {
-                Section("ElevenLabs API") {
-                    SecureField("API Key", text: $elevenLabsApiKey)
-                        .textFieldStyle(.roundedBorder)
-                        .onChange(of: elevenLabsApiKey) { _, newValue in
-                            settings.elevenLabsApiKey = newValue
-                        }
-                    
-                    Text("Get your API key at elevenlabs.io/app/settings/api-keys")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            
-            if settings.sttProvider == .soniox {
-                Section("Soniox API") {
-                    SecureField("API Key", text: $sonioxApiKey)
-                        .textFieldStyle(.roundedBorder)
-                        .onChange(of: sonioxApiKey) { _, newValue in
-                            settings.sonioxApiKey = newValue
-                        }
-                    
-                    Text("Get your API key at console.soniox.com")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            
-            if settings.sttProvider == .glmASR {
-                Section("GLM ASR API (智谱)") {
-                    SecureField("API Key", text: $glmApiKey)
-                        .textFieldStyle(.roundedBorder)
-                        .onChange(of: glmApiKey) { _, newValue in
-                            settings.glmApiKey = newValue
-                        }
-                    
-                    Text("Get your API key at open.bigmodel.cn")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            
-            if settings.sttProvider == .customAPI {
-                Section("Custom STT API") {
-                    TextField("Endpoint URL", text: $settings.customSTTEndpoint)
-                        .textFieldStyle(.roundedBorder)
-                    
-                    Text("e.g., https://api.example.com/v1/audio/transcriptions")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    
-                    SecureField("API Key", text: $customSTTApiKey)
-                        .textFieldStyle(.roundedBorder)
-                        .onChange(of: customSTTApiKey) { _, newValue in
-                            settings.customSTTApiKey = newValue
-                        }
-                    
-                    TextField("Model", text: $settings.customSTTModel)
-                        .textFieldStyle(.roundedBorder)
-                    
-                    Text("Model name for the STT service (e.g., whisper-1)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
         }
         .formStyle(.grouped)
         .padding()
     }
     
-    private var aiTab: some View {
-        Form {
-            Section("Text Correction") {
-                Toggle("Enable AI correction", isOn: $settings.enableLLMCorrection)
+    private var servicesTab: some View {
+        ScrollView {
+            VStack(spacing: 24) {
+                processingModeSection
+                sttSection
+                llmSection
+                vocabularySection
+            }
+            .padding()
+        }
+    }
+    
+    private var processingModeSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("PROCESSING MODE")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .tracking(0.5)
+            
+            HStack(spacing: 12) {
+                ProcessingModeCard(
+                    icon: "laptopcomputer",
+                    title: "Local",
+                    description: "Process on device with your API keys",
+                    isSelected: true
+                )
+                
+                ProcessingModeCard(
+                    icon: "cloud",
+                    title: "Cloud",
+                    description: "Coming Soon",
+                    isSelected: false,
+                    isDisabled: true
+                )
+            }
+        }
+    }
+    
+    private var sttSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("SPEECH RECOGNITION")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .tracking(0.5)
+            
+            VStack(spacing: 8) {
+                ForEach(STTProvider.allCases, id: \.self) { provider in
+                    STTProviderCard(
+                        provider: provider,
+                        isSelected: settings.sttProvider == provider,
+                        modelManager: modelManager,
+                        settings: settings,
+                        apiKey: apiKeyBinding(for: provider),
+                        showModelError: $showModelError
+                    ) {
+                        settings.sttProvider = provider
+                    }
+                }
+            }
+        }
+    }
+    
+    private func apiKeyBinding(for provider: STTProvider) -> Binding<String> {
+        switch provider {
+        case .whisperAPI:
+            return $apiKey
+        case .elevenLabs:
+            return $elevenLabsApiKey
+        case .soniox:
+            return $sonioxApiKey
+        case .glmASR:
+            return $glmApiKey
+        case .customAPI:
+            return $customSTTApiKey
+        default:
+            return .constant("")
+        }
+    }
+    
+    private var llmSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("TEXT ENHANCEMENT")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .tracking(0.5)
+            
+            VStack(spacing: 0) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("LLM Processing")
+                            .font(.system(size: 14, weight: .medium))
+                        Text("Use AI to correct and enhance transcriptions")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Toggle("", isOn: $settings.enableLLMCorrection)
+                        .labelsHidden()
+                }
+                .padding()
                 
                 if settings.enableLLMCorrection {
-                    Picker("Provider", selection: $settings.llmProvider) {
-                        ForEach(LLMProvider.allCases, id: \.self) { provider in
-                            Text(provider.displayName).tag(provider)
+                    Divider()
+                        .padding(.horizontal)
+                    
+                    VStack(spacing: 12) {
+                        Picker("Provider", selection: $settings.llmProvider) {
+                            ForEach(LLMProvider.allCases, id: \.self) { provider in
+                                Text(provider.displayName).tag(provider)
+                            }
+                        }
+                        
+                        if settings.llmProvider == .openAI {
+                            SecureField("API Key", text: $apiKey)
+                                .textFieldStyle(.roundedBorder)
+                                .onChange(of: apiKey) { _, newValue in
+                                    settings.openAIKey = newValue
+                                }
+                            
+                            Picker("Model", selection: $settings.llmModel) {
+                                Text("GPT-4o Mini").tag("gpt-4o-mini")
+                                Text("GPT-4o").tag("gpt-4o")
+                                Text("GPT-3.5 Turbo").tag("gpt-3.5-turbo")
+                            }
+                        }
+                        
+                        if settings.llmProvider == .custom {
+                            TextField("Endpoint URL", text: $settings.customLLMEndpoint)
+                                .textFieldStyle(.roundedBorder)
+                            
+                            SecureField("API Key", text: $customLLMApiKey)
+                                .textFieldStyle(.roundedBorder)
+                                .onChange(of: customLLMApiKey) { _, newValue in
+                                    settings.customLLMApiKey = newValue
+                                }
+                            
+                            TextField("Model", text: $settings.llmModel)
+                                .textFieldStyle(.roundedBorder)
                         }
                     }
+                    .padding()
                 }
             }
+            .background(.secondary.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(.secondary.opacity(0.1), lineWidth: 1)
+            )
+        }
+    }
+    
+    private var vocabularySection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("CUSTOM VOCABULARY")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .tracking(0.5)
             
-            if settings.enableLLMCorrection && settings.llmProvider == .openAI {
-                Section("OpenAI API") {
-                    SecureField("API Key", text: $apiKey)
-                        .textFieldStyle(.roundedBorder)
-                        .onChange(of: apiKey) { _, newValue in
-                            settings.openAIKey = newValue
-                        }
-                    
-                    Picker("Model", selection: $settings.llmModel) {
-                        Text("GPT-4o Mini").tag("gpt-4o-mini")
-                        Text("GPT-4o").tag("gpt-4o")
-                        Text("GPT-3.5 Turbo").tag("gpt-3.5-turbo")
-                    }
-                    
-                    Text("Also used for Whisper API if selected as STT provider")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            
-            if settings.enableLLMCorrection && settings.llmProvider == .custom {
-                Section("Custom LLM API (OpenAI Compatible)") {
-                    TextField("Endpoint URL", text: $settings.customLLMEndpoint)
-                        .textFieldStyle(.roundedBorder)
-                    
-                    Text("Base URL, e.g., https://api.example.com or https://api.example.com/v1")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    
-                    SecureField("API Key", text: $customLLMApiKey)
-                        .textFieldStyle(.roundedBorder)
-                        .onChange(of: customLLMApiKey) { _, newValue in
-                            settings.customLLMApiKey = newValue
-                        }
-                    
-                    TextField("Model", text: $settings.llmModel)
-                        .textFieldStyle(.roundedBorder)
-                    
-                    Text("Model name for the LLM service")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            
-            if needsStandaloneOpenAIKeySection {
-                Section("OpenAI API (for Whisper)") {
-                    SecureField("API Key", text: $apiKey)
-                        .textFieldStyle(.roundedBorder)
-                        .onChange(of: apiKey) { _, newValue in
-                            settings.openAIKey = newValue
-                        }
-                    
-                    Text("Required for OpenAI Whisper STT")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            
-            Section("Custom Vocabulary") {
+            VStack(spacing: 0) {
                 HStack {
                     TextField("Add word or phrase", text: $newVocabWord)
+                        .textFieldStyle(.roundedBorder)
                     Button("Add") {
                         if !newVocabWord.isEmpty {
                             settings.customVocabulary.append(newVocabWord)
                             newVocabWord = ""
                         }
                     }
-                    .buttonStyle(.glass)
+                    .buttonStyle(.borderedProminent)
                     .disabled(newVocabWord.isEmpty)
                 }
+                .padding()
                 
                 if !settings.customVocabulary.isEmpty {
-                    ForEach(settings.customVocabulary, id: \.self) { word in
-                        HStack {
-                            Text(word)
-                            Spacer()
-                            Button {
-                                settings.customVocabulary.removeAll { $0 == word }
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundStyle(.secondary)
+                    Divider()
+                        .padding(.horizontal)
+                    
+                    VStack(spacing: 0) {
+                        ForEach(settings.customVocabulary, id: \.self) { word in
+                            HStack {
+                                Text(word)
+                                    .font(.system(size: 13))
+                                Spacer()
+                                Button {
+                                    settings.customVocabulary.removeAll { $0 == word }
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundStyle(.secondary)
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
+                            .padding(.horizontal)
+                            .padding(.vertical, 8)
                         }
                     }
                 }
             }
+            .background(.secondary.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(.secondary.opacity(0.1), lineWidth: 1)
+            )
         }
-        .formStyle(.grouped)
-        .padding()
     }
     
     private var modesTab: some View {
@@ -792,6 +738,230 @@ struct HotkeyRecorder: View {
             98: "F7", 100: "F8", 101: "F9", 109: "F10", 103: "F11", 111: "F12",
         ]
         return keyNames[code] ?? "Key \(code)"
+    }
+}
+
+struct ProcessingModeCard: View {
+    let icon: String
+    let title: String
+    let description: String
+    let isSelected: Bool
+    var isDisabled: Bool = false
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 24))
+                .foregroundStyle(isSelected ? .accent : .secondary)
+            
+            Text(title)
+                .font(.system(size: 13, weight: .medium))
+            
+            Text(description)
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 16)
+        .background(isSelected ? .accent.opacity(0.1) : .secondary.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(isSelected ? .accent.opacity(0.3) : .secondary.opacity(0.1), lineWidth: 1)
+        )
+        .opacity(isDisabled ? 0.5 : 1)
+    }
+}
+
+struct STTProviderCard: View {
+    let provider: STTProvider
+    let isSelected: Bool
+    @ObservedObject var modelManager: ModelManager
+    @ObservedObject var settings: AppSettings
+    @Binding var apiKey: String
+    @Binding var showModelError: String?
+    let onSelect: () -> Void
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            Button(action: onSelect) {
+                HStack {
+                    Image(systemName: provider.icon)
+                        .font(.system(size: 16))
+                        .foregroundStyle(isSelected ? .accent : .secondary)
+                        .frame(width: 32)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(provider.displayName)
+                            .font(.system(size: 13, weight: .medium))
+                        Text(provider.subtitle)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    if isSelected {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.accent)
+                    }
+                }
+                .padding()
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            
+            if isSelected {
+                providerConfig
+            }
+        }
+        .background(isSelected ? .accent.opacity(0.05) : .secondary.opacity(0.03), in: RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(isSelected ? .accent.opacity(0.2) : .secondary.opacity(0.08), lineWidth: 1)
+        )
+    }
+    
+    @ViewBuilder
+    private var providerConfig: some View {
+        Divider()
+            .padding(.horizontal)
+        
+        VStack(spacing: 12) {
+            switch provider {
+            case .sherpaLocal:
+                localModelConfig
+                
+            case .whisperAPI:
+                SecureField("OpenAI API Key", text: $apiKey)
+                    .textFieldStyle(.roundedBorder)
+                    .onChange(of: apiKey) { _, newValue in
+                        settings.openAIKey = newValue
+                    }
+                
+            case .elevenLabs, .soniox, .glmASR:
+                SecureField("API Key", text: $apiKey)
+                    .textFieldStyle(.roundedBorder)
+                    .onChange(of: apiKey) { _, newValue in
+                        saveApiKey(newValue)
+                    }
+                
+                if let hint = provider.apiHint {
+                    Text(hint)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                }
+                
+            case .customAPI:
+                TextField("Endpoint URL", text: $settings.customSTTEndpoint)
+                    .textFieldStyle(.roundedBorder)
+                
+                SecureField("API Key", text: $apiKey)
+                    .textFieldStyle(.roundedBorder)
+                    .onChange(of: apiKey) { _, newValue in
+                        settings.customSTTApiKey = newValue
+                    }
+                
+                TextField("Model", text: $settings.customSTTModel)
+                    .textFieldStyle(.roundedBorder)
+                
+            case .appleSpeech:
+                Text("Uses built-in macOS speech recognition")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding()
+    }
+    
+    private var localModelConfig: some View {
+        VStack(spacing: 12) {
+            Picker("Model", selection: $modelManager.selectedModel) {
+                ForEach(LocalModel.allCases) { model in
+                    HStack {
+                        Text(model.displayName)
+                        if !modelManager.isModelAvailable(model) {
+                            Text("(\(model.sizeDescription))")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .tag(model)
+                }
+            }
+            
+            let selectedModel = modelManager.selectedModel
+            
+            if modelManager.isModelAvailable(selectedModel) {
+                HStack {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                    Text("Ready to use")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    if !selectedModel.isBundled {
+                        Button("Delete") {
+                            do {
+                                try modelManager.deleteModel(selectedModel)
+                            } catch {
+                                showModelError = error.localizedDescription
+                            }
+                        }
+                        .font(.system(size: 12))
+                        .foregroundStyle(.red)
+                    }
+                }
+            } else if modelManager.isModelDownloading(selectedModel) {
+                HStack {
+                    ProgressView(value: modelManager.downloadProgress[selectedModel] ?? 0)
+                    Text("\(Int((modelManager.downloadProgress[selectedModel] ?? 0) * 100))%")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                    Button("Cancel") {
+                        modelManager.cancelDownload(selectedModel)
+                    }
+                    .font(.system(size: 12))
+                }
+            } else {
+                HStack {
+                    Text("Model not downloaded")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Download (\(selectedModel.sizeDescription))") {
+                        Task {
+                            do {
+                                try await modelManager.downloadModel(selectedModel)
+                            } catch {
+                                showModelError = error.localizedDescription
+                            }
+                        }
+                    }
+                    .font(.system(size: 12))
+                    .buttonStyle(.borderedProminent)
+                }
+            }
+            
+            if let error = showModelError {
+                Text(error)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.red)
+            }
+        }
+    }
+    
+    private func saveApiKey(_ value: String) {
+        switch provider {
+        case .elevenLabs:
+            settings.elevenLabsApiKey = value
+        case .soniox:
+            settings.sonioxApiKey = value
+        case .glmASR:
+            settings.glmApiKey = value
+        default:
+            break
+        }
     }
 }
 

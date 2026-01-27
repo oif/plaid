@@ -281,6 +281,27 @@ enum STTProvider: String, CaseIterable {
         }
     }
     
+    var subtitle: String {
+        switch self {
+        case .appleSpeech: return "Built-in macOS speech recognition"
+        case .sherpaLocal: return "Fast, private, offline"
+        case .whisperAPI: return "OpenAI cloud API"
+        case .elevenLabs: return "ElevenLabs Scribe"
+        case .soniox: return "Soniox transcription"
+        case .glmASR: return "智谱 ASR"
+        case .customAPI: return "OpenAI-compatible endpoint"
+        }
+    }
+    
+    var apiHint: String? {
+        switch self {
+        case .elevenLabs: return "Get key at elevenlabs.io"
+        case .soniox: return "Get key at console.soniox.com"
+        case .glmASR: return "Get key at open.bigmodel.cn"
+        default: return nil
+        }
+    }
+    
     var description: String {
         switch self {
         case .appleSpeech: return "Built-in macOS speech recognition"

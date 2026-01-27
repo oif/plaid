@@ -15,8 +15,7 @@ enum MainTab: String, CaseIterable {
 
 enum SettingsSection: String, CaseIterable, Identifiable {
     case general = "General"
-    case speech = "Speech"
-    case ai = "AI"
+    case services = "Services"
     case modes = "Modes"
     case about = "About"
     
@@ -25,8 +24,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .general: return "gear"
-        case .speech: return "mic"
-        case .ai: return "sparkles"
+        case .services: return "bolt.horizontal"
         case .modes: return "square.stack.3d.up"
         case .about: return "info.circle"
         }
