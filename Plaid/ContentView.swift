@@ -13,6 +13,26 @@ enum MainTab: String, CaseIterable {
     }
 }
 
+enum SettingsSection: String, CaseIterable, Identifiable {
+    case general = "General"
+    case speech = "Speech"
+    case ai = "AI"
+    case modes = "Modes"
+    case about = "About"
+    
+    var id: String { rawValue }
+    
+    var icon: String {
+        switch self {
+        case .general: return "gear"
+        case .speech: return "mic"
+        case .ai: return "sparkles"
+        case .modes: return "square.stack.3d.up"
+        case .about: return "info.circle"
+        }
+    }
+}
+
 // MARK: - Custom Tab Switcher
 
 struct TabSwitcher: View {
@@ -73,19 +93,10 @@ struct TabButton: View {
 struct ContentView: View {
     @EnvironmentObject var appState: AppState
     @State private var selectedRecord: TranscriptionRecord?
+    @State private var selectedSettingsSection: SettingsSection = .general
     @State private var showFileImporter = false
-    @State private var searchText = ""
     
     @ObservedObject private var historyService = TranscriptionHistoryService.shared
-    
-    private var filteredRecords: [TranscriptionRecord] {
-        if searchText.isEmpty {
-            return historyService.recentRecords
-        }
-        return historyService.recentRecords.filter {
-            $0.displayText.localizedStandardContains(searchText)
-        }
-    }
     
     var body: some View {
         NavigationSplitView {
@@ -94,7 +105,6 @@ struct ContentView: View {
             detailView
         }
         .frame(minWidth: 700, minHeight: 500)
-        .searchable(text: $searchText, isPresented: .constant(appState.selectedMainTab == .history), prompt: "Search transcriptions...")
         .fileImporter(
             isPresented: $showFileImporter,
             allowedContentTypes: [.wav, .audio],
@@ -156,7 +166,7 @@ struct ContentView: View {
             Divider()
                 .padding(.horizontal, 12)
             
-            if filteredRecords.isEmpty {
+            if historyService.recentRecords.isEmpty {
                 emptyStateView
             } else {
                 recordsList
@@ -165,12 +175,11 @@ struct ContentView: View {
     }
     
     private var settingsSidebar: some View {
-        List {
-            Label("General", systemImage: "gear")
-            Label("Speech", systemImage: "mic")
-            Label("AI", systemImage: "sparkles")
-            Label("Modes", systemImage: "square.stack.3d.up")
-            Label("About", systemImage: "info.circle")
+        List(selection: $selectedSettingsSection) {
+            ForEach(SettingsSection.allCases) { section in
+                Label(section.rawValue, systemImage: section.icon)
+                    .tag(section)
+            }
         }
         .listStyle(.sidebar)
     }
@@ -288,7 +297,7 @@ struct ContentView: View {
     
     private var recordsList: some View {
         List(selection: $selectedRecord) {
-            ForEach(filteredRecords) { record in
+            ForEach(historyService.recentRecords) { record in
                 RecordRow(record: record)
                     .tag(record)
                     .contextMenu {
@@ -319,7 +328,7 @@ struct ContentView: View {
     @ViewBuilder
     private var detailView: some View {
         if appState.selectedMainTab == .settings {
-            SettingsContentView()
+            SettingsContentView(selectedSection: selectedSettingsSection)
                 .environmentObject(appState)
         } else if let record = selectedRecord {
             RecordDetailView(record: record)

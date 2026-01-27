@@ -1,23 +1,13 @@
 import SwiftUI
 
-// Settings view for separate window (legacy, kept for reference)
-struct SettingsView: View {
-    var body: some View {
-        SettingsContentView()
-            .frame(width: 520, height: 480)
-    }
-}
-
-// Settings content that adapts to container - used in main window
 struct SettingsContentView: View {
+    let selectedSection: SettingsSection
     @EnvironmentObject var appState: AppState
     
-    // Use @ObservedObject for singletons that need bindings ($settings, $modelManager, etc.)
     @ObservedObject private var settings = AppSettings.shared
     @ObservedObject private var modelManager = ModelManager.shared
     @ObservedObject private var audioInputManager = AudioInputManager.shared
     
-    // Local state for Keychain-backed API keys (required for SecureField binding)
     @State private var apiKey = ""
     @State private var customSTTApiKey = ""
     @State private var customLLMApiKey = ""
@@ -31,32 +21,22 @@ struct SettingsContentView: View {
     @State private var showModeEditor = false
     
     var body: some View {
-        TabView {
-            generalTab
-                .tabItem {
-                    Label("General", systemImage: "gear")
-                }
-            
-            speechTab
-                .tabItem {
-                    Label("Speech", systemImage: "mic")
-                }
-            
-            aiTab
-                .tabItem {
-                    Label("AI", systemImage: "sparkles")
-                }
-            
-            modesTab
-                .tabItem {
-                    Label("Modes", systemImage: "square.stack.3d.up")
-                }
-            
-            aboutTab
-                .tabItem {
-                    Label("About", systemImage: "info.circle")
-                }
+        Group {
+            switch selectedSection {
+            case .general:
+                generalTab
+            case .speech:
+                speechTab
+            case .ai:
+                aiTab
+            case .modes:
+                modesTab
+            case .about:
+                aboutTab
+            }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(nsColor: .windowBackgroundColor))
         .onAppear {
             apiKey = settings.openAIKey
             customSTTApiKey = settings.customSTTApiKey
@@ -661,6 +641,6 @@ struct ModeEditorView: View {
 }
 
 #Preview {
-    SettingsView()
+    SettingsContentView(selectedSection: .general)
         .environmentObject(AppState())
 }
