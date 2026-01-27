@@ -78,8 +78,7 @@ jobs:
           
       - name: Setup Sparkle
         run: |
-          SPARKLE_URL=$(curl -s https://api.github.com/repos/sparkle-project/Sparkle/releases/latest | grep "browser_download_url.*tar.xz" | cut -d '"' -f 4)
-          curl -L -o /tmp/Sparkle.tar.xz "$SPARKLE_URL"
+          curl -L -o /tmp/Sparkle.tar.xz https://github.com/sparkle-project/Sparkle/releases/download/2.8.1/Sparkle-2.8.1.tar.xz
           mkdir -p /tmp/Sparkle
           tar -xf /tmp/Sparkle.tar.xz -C /tmp/Sparkle
           echo "SPARKLE_BIN=/tmp/Sparkle/bin" >> $GITHUB_ENV
@@ -121,7 +120,7 @@ jobs:
           R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          R2_BUCKET: ${{ vars.R2_BUCKET }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
         run: |
           # Install AWS CLI for S3-compatible upload
           brew install awscli
