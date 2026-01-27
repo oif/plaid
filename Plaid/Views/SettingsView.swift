@@ -74,7 +74,7 @@ struct SettingsContentView: View {
                         Button("Grant Access") {
                             appState.appContext.requestAccessibilityPermission()
                         }
-                        .buttonStyle(.glass)
+                        .buttonStyle(.glassCompat)
                     }
                 }
             }
@@ -88,6 +88,28 @@ struct SettingsContentView: View {
                         modifiers: $settings.hotkeyModifiers,
                         useFn: $settings.hotkeyUseFn
                     )
+                }
+            }
+            
+            Section("Updates") {
+                Toggle("Automatically check for updates", isOn: Binding(
+                    get: { SparkleUpdater.shared.automaticallyChecksForUpdates },
+                    set: { SparkleUpdater.shared.automaticallyChecksForUpdates = $0 }
+                ))
+                
+                HStack {
+                    Button("Check for Updates…") {
+                        SparkleUpdater.shared.checkForUpdates()
+                    }
+                    .disabled(!SparkleUpdater.shared.canCheckForUpdates)
+                    
+                    Spacer()
+                    
+                    if let lastCheck = SparkleUpdater.shared.lastUpdateCheckDate {
+                        Text("Last checked: \(lastCheck, style: .relative) ago")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
             
@@ -408,7 +430,7 @@ struct SettingsContentView: View {
                         .font(.largeTitle)
                         .fontWeight(.bold)
                     
-                    Text("Version 1.0.0")
+                    Text("Version \(Bundle.main.appVersion)")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -423,7 +445,7 @@ struct SettingsContentView: View {
                     .multilineTextAlignment(.center)
                     .italic()
                 
-                GlassEffectContainer(spacing: 16) {
+                GlassContainer(spacing: 16) {
                     VStack(alignment: .leading, spacing: 12) {
                         aboutFeatureRow(icon: "mic.fill", color: .red, title: "Voice to Text", desc: "Local or cloud-powered speech recognition")
                         aboutFeatureRow(icon: "sparkles", color: .purple, title: "AI Enhancement", desc: "Smart correction with custom prompts")
@@ -434,7 +456,7 @@ struct SettingsContentView: View {
                     .padding(.vertical, 4)
                 }
                 
-                GlassEffectContainer(spacing: 12) {
+                GlassContainer(spacing: 12) {
                     VStack(spacing: 12) {
                         Text("Created by")
                             .font(.caption)
@@ -842,17 +864,15 @@ struct STTProviderCard: View {
                         .font(.system(size: 12))
                         .foregroundStyle(.secondary)
                     Spacer()
-                    if !selectedModel.isBundled {
-                        Button("Delete") {
-                            do {
-                                try modelManager.deleteModel(selectedModel)
-                            } catch {
-                                showModelError = error.localizedDescription
-                            }
+                    Button("Delete") {
+                        do {
+                            try modelManager.deleteModel(selectedModel)
+                        } catch {
+                            showModelError = error.localizedDescription
                         }
-                        .font(.system(size: 12))
-                        .foregroundStyle(.red)
                     }
+                    .font(.system(size: 12))
+                    .foregroundStyle(.red)
                 }
             } else if modelManager.isModelDownloading(selectedModel) {
                 HStack {
@@ -911,4 +931,12 @@ struct STTProviderCard: View {
 #Preview {
     SettingsContentView(selectedSection: .general)
         .environmentObject(AppState())
+}
+
+extension Bundle {
+    var appVersion: String {
+        let version = infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+        let build = infoDictionary?["CFBundleVersion"] as? String ?? "1"
+        return "\(version) (\(build))"
+    }
 }

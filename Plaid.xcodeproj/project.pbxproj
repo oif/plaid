@@ -20,7 +20,6 @@
 		A10000010000000000000013 /* CompactWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000015 /* CompactWindowView.swift */; };
 		A10000010000000000000017 /* ModelManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000017 /* ModelManager.swift */; };
 		A10000010000000000000018 /* SherpaOnnxService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000018 /* SherpaOnnxService.swift */; };
-		A10000010000000000000020 /* Models in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000020 /* Models */; };
 		A10000010000000000000034 /* AudioTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000034 /* AudioTypes.swift */; };
 		A10000010000000000000040 /* VADProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000040 /* VADProcessor.swift */; };
 		A10000010000000000000041 /* AudioPipelineDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000041 /* AudioPipelineDelegate.swift */; };
@@ -30,11 +29,13 @@
 		B513EBF12F27920F005F4669 /* TranscriptionPillController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B513EBEE2F27920F005F4669 /* TranscriptionPillController.swift */; };
 		B513EBF22F27920F005F4669 /* TranscriptionPillState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B513EBEF2F27920F005F4669 /* TranscriptionPillState.swift */; };
 		B513EBF42F27921B005F4669 /* TranscriptionPillView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B513EBF32F27921B005F4669 /* TranscriptionPillView.swift */; };
+		B513EC202F27E000005F4669 /* GlassCompat.swift in Sources */ = {isa = PBXBuildFile; fileRef = B513EC1F2F27E000005F4669 /* GlassCompat.swift */; };
 		B513EBF62F279537005F4669 /* SileroVADService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B513EBF52F279537005F4669 /* SileroVADService.swift */; };
 		B513EBF82F279600005F4669 /* SpeechDenoiserService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B513EBF72F279600005F4669 /* SpeechDenoiserService.swift */; };
-		B513EC002F27A000005F4669 /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = B513EBFF2F27A000005F4669 /* KeyboardShortcuts */; };
 		B513EC0A2F27B000005F4669 /* TranscriptionHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = B513EC0B2F27B000005F4669 /* TranscriptionHistory.swift */; };
 		B513EC0C2F27C000005F4669 /* SpeechService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B513EC0D2F27C000005F4669 /* SpeechService.swift */; };
+		B513EC102F27D000005F4669 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = B513EC0F2F27D000005F4669 /* Sparkle */; };
+		B513EC122F27D100005F4669 /* SparkleUpdater.swift in Sources */ = {isa = PBXBuildFile; fileRef = B513EC112F27D100005F4669 /* SparkleUpdater.swift */; };
 		C10000010000000000000001 /* libsherpa-onnx-c-api.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = C20000010000000000000001 /* libsherpa-onnx-c-api.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		C10000010000000000000002 /* libonnxruntime.1.20.1.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = C20000010000000000000002 /* libonnxruntime.1.20.1.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 /* End PBXBuildFile section */
@@ -57,7 +58,6 @@
 		A20000010000000000000017 /* ModelManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelManager.swift; sourceTree = "<group>"; };
 		A20000010000000000000018 /* SherpaOnnxService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SherpaOnnxService.swift; sourceTree = "<group>"; };
 		A20000010000000000000019 /* Plaid-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Plaid-Bridging-Header.h"; sourceTree = "<group>"; };
-		A20000010000000000000020 /* Models */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Models; sourceTree = SOURCE_ROOT; };
 		A20000010000000000000021 /* sherpa-onnx.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = "sherpa-onnx.xcframework"; path = "../Frameworks/sherpa-onnx.xcframework"; sourceTree = "<group>"; };
 		A20000010000000000000034 /* AudioTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioTypes.swift; sourceTree = "<group>"; };
 		A20000010000000000000040 /* VADProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VADProcessor.swift; sourceTree = "<group>"; };
@@ -68,10 +68,12 @@
 		B513EBEE2F27920F005F4669 /* TranscriptionPillController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionPillController.swift; sourceTree = "<group>"; };
 		B513EBEF2F27920F005F4669 /* TranscriptionPillState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionPillState.swift; sourceTree = "<group>"; };
 		B513EBF32F27921B005F4669 /* TranscriptionPillView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionPillView.swift; sourceTree = "<group>"; };
+		B513EC1F2F27E000005F4669 /* GlassCompat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassCompat.swift; sourceTree = "<group>"; };
 		B513EBF52F279537005F4669 /* SileroVADService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SileroVADService.swift; sourceTree = "<group>"; };
 		B513EBF72F279600005F4669 /* SpeechDenoiserService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechDenoiserService.swift; sourceTree = "<group>"; };
 		B513EC0B2F27B000005F4669 /* TranscriptionHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionHistory.swift; sourceTree = "<group>"; };
 		B513EC0D2F27C000005F4669 /* SpeechService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechService.swift; sourceTree = "<group>"; };
+		B513EC112F27D100005F4669 /* SparkleUpdater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SparkleUpdater.swift; sourceTree = "<group>"; };
 		C20000010000000000000001 /* libsherpa-onnx-c-api.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libsherpa-onnx-c-api.dylib"; path = "Frameworks/sherpa-onnx/lib/libsherpa-onnx-c-api.dylib"; sourceTree = "<group>"; };
 		C20000010000000000000002 /* libonnxruntime.1.20.1.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libonnxruntime.1.20.1.dylib"; path = "Frameworks/sherpa-onnx/lib/libonnxruntime.1.20.1.dylib"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -96,7 +98,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B513EC002F27A000005F4669 /* KeyboardShortcuts in Frameworks */,
+				B513EC102F27D000005F4669 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -152,6 +154,7 @@
 				A20000010000000000000017 /* ModelManager.swift */,
 				A20000010000000000000018 /* SherpaOnnxService.swift */,
 				A20000010000000000000034 /* AudioTypes.swift */,
+				B513EC112F27D100005F4669 /* SparkleUpdater.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -163,6 +166,7 @@
 				A20000010000000000000009 /* SettingsView.swift */,
 				A20000010000000000000013 /* AudioWaveformView.swift */,
 				A20000010000000000000015 /* CompactWindowView.swift */,
+				B513EC1F2F27E000005F4669 /* GlassCompat.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -170,7 +174,6 @@
 		A40000010000000000000005 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				A20000010000000000000020 /* Models */,
 				A20000010000000000000021 /* sherpa-onnx.xcframework */,
 				C20000010000000000000001 /* libsherpa-onnx-c-api.dylib */,
 				C20000010000000000000002 /* libonnxruntime.1.20.1.dylib */,
@@ -209,7 +212,6 @@
 			);
 			name = Plaid;
 			packageProductDependencies = (
-				B513EBFF2F27A000005F4669 /* KeyboardShortcuts */,
 			);
 			productName = Plaid;
 			productReference = A20000010000000000000000 /* Plaid.app */;
@@ -240,7 +242,7 @@
 			);
 			mainGroup = A40000010000000000000000;
 			packageReferences = (
-				B513EBFE2F27A000005F4669 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
+				B513EC0E2F27D000005F4669 /* XCRemoteSwiftPackageReference "Sparkle" */,
 			);
 			productRefGroup = A40000010000000000000002 /* Products */;
 			projectDirPath = "";
@@ -257,7 +259,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000010000000000000003 /* Assets.xcassets in Resources */,
-				A10000010000000000000020 /* Models in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -275,6 +276,7 @@
 				B513EBF02F27920F005F4669 /* GlobalHotkeyManager.swift in Sources */,
 				B513EBF12F27920F005F4669 /* TranscriptionPillController.swift in Sources */,
 				B513EBF42F27921B005F4669 /* TranscriptionPillView.swift in Sources */,
+				B513EC202F27E000005F4669 /* GlassCompat.swift in Sources */,
 				B513EBF22F27920F005F4669 /* TranscriptionPillState.swift in Sources */,
 				A10000010000000000000042 /* AudioPipeline.swift in Sources */,
 				A10000010000000000000043 /* AudioInputManager.swift in Sources */,
@@ -293,6 +295,7 @@
 				A10000010000000000000018 /* SherpaOnnxService.swift in Sources */,
 				B513EC0A2F27B000005F4669 /* TranscriptionHistory.swift in Sources */,
 				B513EC0C2F27C000005F4669 /* SpeechService.swift in Sources */,
+				B513EC122F27D100005F4669 /* SparkleUpdater.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -352,7 +355,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -409,7 +412,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
@@ -539,9 +542,9 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		B513EBFE2F27A000005F4669 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */ = {
+		B513EC0E2F27D000005F4669 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/sindresorhus/KeyboardShortcuts";
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 2.0.0;
@@ -550,10 +553,10 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		B513EBFF2F27A000005F4669 /* KeyboardShortcuts */ = {
+		B513EC0F2F27D000005F4669 /* Sparkle */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = B513EBFE2F27A000005F4669 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */;
-			productName = KeyboardShortcuts;
+			package = B513EC0E2F27D000005F4669 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

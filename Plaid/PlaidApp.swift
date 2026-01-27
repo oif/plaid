@@ -13,6 +13,9 @@ struct PlaidApp: App {
         .windowResizability(.contentSize)
         .commands {
             CommandGroup(replacing: .newItem) {}
+            CommandGroup(after: .appInfo) {
+                CheckForUpdatesView()
+            }
         }
         
         Window("Compact", id: "compact") {
@@ -259,7 +262,7 @@ struct MenuBarView: View {
             
             Divider()
             
-            GlassEffectContainer(spacing: 12) {
+            GlassContainer(spacing: 12) {
                 Button {
                     Task {
                         await appState.toggleRecording()
@@ -271,10 +274,10 @@ struct MenuBarView: View {
                     }
                     .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.glassProminent)
+                .buttonStyle(.glassProminentCompat)
                 .tint(appState.isRecording ? .red : .accentColor)
                 .keyboardShortcut("r", modifiers: [.command])
-                .glassEffectID("recordButton", in: menuNamespace)
+                .glassID("recordButton", in: menuNamespace)
             }
             
             Text(appState.statusMessage)
@@ -284,7 +287,7 @@ struct MenuBarView: View {
             
             Divider()
             
-            GlassEffectContainer(spacing: 8) {
+            GlassContainer(spacing: 8) {
                 HStack(spacing: 10) {
                     Button {
                         openWindow(id: "compact")
@@ -292,9 +295,9 @@ struct MenuBarView: View {
                         Image(systemName: "pip")
                             .frame(width: 32, height: 32)
                     }
-                    .buttonStyle(.glass)
+                    .buttonStyle(.glassCompat)
                     .buttonBorderShape(.circle)
-                    .glassEffectID("compact", in: menuNamespace)
+                    .glassID("compact", in: menuNamespace)
                     .help("Compact Mode")
                     
                     Button {
@@ -309,10 +312,10 @@ struct MenuBarView: View {
                         Image(systemName: "gear")
                             .frame(width: 32, height: 32)
                     }
-                    .buttonStyle(.glass)
+                    .buttonStyle(.glassCompat)
                     .buttonBorderShape(.circle)
                     .keyboardShortcut(",", modifiers: [.command])
-                    .glassEffectID("settings", in: menuNamespace)
+                    .glassID("settings", in: menuNamespace)
                     
                     Button {
                         NSApp.terminate(nil)
@@ -320,11 +323,11 @@ struct MenuBarView: View {
                         Image(systemName: "power")
                             .frame(width: 32, height: 32)
                     }
-                    .buttonStyle(.glass)
+                    .buttonStyle(.glassCompat)
                     .buttonBorderShape(.circle)
                     .tint(.red)
                     .keyboardShortcut("q", modifiers: [.command])
-                    .glassEffectID("quit", in: menuNamespace)
+                    .glassID("quit", in: menuNamespace)
                 }
             }
         }

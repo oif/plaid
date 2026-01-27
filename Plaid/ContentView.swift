@@ -52,7 +52,7 @@ struct TabSwitcher: View {
             }
         }
         .padding(4)
-        .glassEffect(.regular, in: .capsule)
+        .glassBackground(in: Capsule())
     }
 }
 
@@ -848,7 +848,7 @@ struct StatBadge: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .glassEffect(.regular, in: .rect(cornerRadius: 10))
+        .glassBackground(in: RoundedRectangle(cornerRadius: 10))
     }
 }
 

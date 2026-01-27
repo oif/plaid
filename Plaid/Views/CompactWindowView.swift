@@ -17,7 +17,7 @@ struct CompactWindowView: View {
                 }
                 .frame(width: 40, height: 40)
             }
-            .buttonStyle(.glass)
+            .buttonStyle(.glassCompat)
             .buttonBorderShape(.circle)
             .tint(appState.isRecording ? .red : .accentColor)
             .scaleEffect(isHovering ? 1.08 : 1.0)
@@ -54,7 +54,7 @@ struct CompactWindowView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .frame(width: 200)
-        .glassEffect(.regular, in: .rect(cornerRadius: 12))
+        .glassBackground(in: RoundedRectangle(cornerRadius: 12))
     }
     
     private var compactStatus: String {
