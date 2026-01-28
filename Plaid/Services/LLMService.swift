@@ -6,14 +6,17 @@ private let logger = Logger(subsystem: "com.neospaceindustries.plaid", category:
 @MainActor
 class LLMService {
     
-    func process(_ text: String, systemPrompt: String, onPartial: ((String) -> Void)? = nil) async throws -> String {
+    func process(messages: [[String: String]], onPartial: ((String) -> Void)? = nil) async throws -> String {
         let settings = AppSettings.shared
         
         let apiKey = settings.effectiveLLMApiKey
         let endpoint = settings.effectiveLLMEndpoint
         
         guard !apiKey.isEmpty, !endpoint.isEmpty else {
-            return text
+            if let lastUserMsg = messages.last(where: { $0["role"] == "user" }) {
+                return lastUserMsg["content"] ?? ""
+            }
+            return ""
         }
         
         guard let url = URL(string: endpoint) else {
@@ -21,8 +24,7 @@ class LLMService {
         }
         
         return try await executeRequest(
-            text: text,
-            systemPrompt: systemPrompt,
+            messages: messages,
             url: url,
             apiKey: apiKey,
             model: settings.llmModel,
@@ -33,24 +35,19 @@ class LLMService {
     // MARK: - Private
     
     private func executeRequest(
-        text: String,
-        systemPrompt: String,
+        messages: [[String: String]],
         url: URL,
         apiKey: String,
         model: String,
         onPartial: ((String) -> Void)?
     ) async throws -> String {
-        
-        let messages: [[String: Any]] = [
-            ["role": "system", "content": systemPrompt],
-            ["role": "user", "content": text]
-        ]
+        let messagesPayload: [[String: Any]] = messages.map { $0 as [String: Any] }
         
         let useStreaming = onPartial != nil
         
         var requestBody: [String: Any] = [
             "model": model,
-            "messages": messages,
+            "messages": messagesPayload,
             "temperature": 0.1,
             "max_tokens": 512
         ]

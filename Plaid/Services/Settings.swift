@@ -9,23 +9,26 @@ extension Notification.Name {
 class AppSettings: ObservableObject {
     static let shared = AppSettings()
     
-    static let defaultPrompt = """
-你是一个语音转文字后处理助手。请修正用户发来的转录文本。
+    // MARK: - System Prompt (stable across requests, prompt-cache friendly)
+    static let defaultSystemPrompt = """
+你是语音转文字后处理助手。修正转录文本中的识别错误，输出干净的书面文本。仅输出修正结果，不要添加任何解释或前缀。
 
-**修正范围：**
-- 同音字/谐音错误（如「以经」→「已经」）
-- 缺失或错误的标点符号
-- 语句不通顺或语法问题
-- 技术术语、品牌名、产品名、公司名：识别后按官方拼写和大小写修正（如 cloudflare→Cloudflare, github→GitHub, iphone→iPhone）
+**修正规则（按优先级排序）：**
+1. 自我纠正：说话人改口时，删除被否定的部分，只保留最终表述
+   触发词：不对、不是、我说错了、等等应该是、哦不、我重新说
+2. 同音字/谐音错误：当识别结果在语境中语义不通时，替换为发音相近且语义合理的字词（如「时间方式」在讨论方法论时应为「实践方式」；「以经」→「已经」）
+3. 术语与品牌名：按官方拼写和大小写修正（cloudflare→Cloudflare, github→GitHub, iphone→iPhone）；保留英文术语原文，不要翻译为中文
+4. 标点符号：添加或修正为正确的中/英文标点
+5. 口语清理：移除填充词（嗯、啊、那个、就是说、然后然后）、无意义重复、不完整的句子碎片
 
-**移除内容：**
-- 口语填充词：嗯、啊、那个、就是说、然后然后...
-- 无意义重复
-- 不完整的句子碎片
+**约束：**
+- 保持说话人的语义、风格和意图不变
+- 不要添加原文没有的信息
+- 不要翻译——原文中英混合则保持混合
+- 原文已正确时，原样输出
 
-**保持不变：**
-- 原有语义和表达风格
-- 说话人的语气和意图
+**关键词：**
+"Plaid" 是本应用名称和唤醒词。发音接近 plaid/played/blade/plead/pled/plate/plain 且语义指代本应用时，修正为 "Plaid"。
 
 **示例：**
 输入：嗯那个我想把这个代码部署到cloudflare的workers上面然后然后用github action来自动化
@@ -34,10 +37,32 @@ class AppSettings: ObservableObject {
 输入：他说这个modle的latancy太高了我们需要opitmize一下
 输出：他说这个 model 的 latency 太高了，我们需要 optimize 一下。
 
-直接输出修正后的文本，无需解释。
+输入：hey played帮我打开设置
+输出：Hey Plaid，帮我打开设置。
+
+输入：我们用那个react不对不是react用vue来写前端
+输出：我们用 Vue 来写前端。
+
+输入：这个项目大概需要三到不对是四到五天时间
+输出：这个项目大概需要四到五天时间。
+
+输入：我觉得这个方案OK没什么问题
+输出：我觉得这个方案 OK，没什么问题。
+
+输入：呃我可能会更加的关注是配置的一些时间方式不care部署的方式
+输出：我可能会更加关注配置的一些实践方式，不 care 部署的方式。
+"""
+    
+    // MARK: - User Prompt Template (dynamic per-request context)
+    static let defaultUserPrompt = """
 {{context}}
 {{vocabulary}}
+请修正以下转录文本：
+{{text}}
 """
+    
+    // Legacy: combined prompt for migration
+    static let defaultPrompt = defaultSystemPrompt + defaultUserPrompt
     
     private let defaults = UserDefaults.standard
     
@@ -86,8 +111,12 @@ class AppSettings: ObservableObject {
         didSet { defaults.set(enableLLMCorrection, forKey: "enableLLMCorrection") }
     }
     
-    @Published var customPrompt: String {
-        didSet { defaults.set(customPrompt, forKey: "customPrompt") }
+    @Published var customSystemPrompt: String {
+        didSet { defaults.set(customSystemPrompt, forKey: "customSystemPrompt") }
+    }
+    
+    @Published var customUserPrompt: String {
+        didSet { defaults.set(customUserPrompt, forKey: "customUserPrompt") }
     }
     
     @Published var llmProvider: LLMProvider {
@@ -164,13 +193,17 @@ class AppSettings: ObservableObject {
         
         // LLM
         self.enableLLMCorrection = defaults.object(forKey: "enableLLMCorrection") as? Bool ?? true
-        let savedPrompt = defaults.string(forKey: "customPrompt") ?? AppSettings.defaultPrompt
-        if savedPrompt.contains("{{text}}") {
-            self.customPrompt = AppSettings.defaultPrompt
-            defaults.set(AppSettings.defaultPrompt, forKey: "customPrompt")
-        } else {
-            self.customPrompt = savedPrompt
+        
+        // Migrate from legacy single customPrompt to split system/user prompts
+        if let legacyPrompt = defaults.string(forKey: "customPrompt"),
+           defaults.string(forKey: "customSystemPrompt") == nil {
+            defaults.removeObject(forKey: "customPrompt")
+            if legacyPrompt != AppSettings.defaultPrompt && !legacyPrompt.contains("{{text}}") {
+                defaults.set(legacyPrompt, forKey: "customSystemPrompt")
+            }
         }
+        self.customSystemPrompt = defaults.string(forKey: "customSystemPrompt") ?? AppSettings.defaultSystemPrompt
+        self.customUserPrompt = defaults.string(forKey: "customUserPrompt") ?? AppSettings.defaultUserPrompt
         let llmProv = defaults.string(forKey: "llmProvider") ?? "openai"
         self.llmProvider = LLMProvider(rawValue: llmProv) ?? .openAI
         self.llmModel = defaults.string(forKey: "llmModel") ?? "gpt-4o-mini"
