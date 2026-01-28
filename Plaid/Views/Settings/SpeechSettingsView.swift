@@ -196,33 +196,19 @@ struct SpeechSettingsView: View {
                             .padding(.vertical, 4)
                         
                         VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                Text("Custom Prompt")
-                                    .font(.system(size: 12, weight: .medium))
-                                Spacer()
-                                if settings.customPrompt != AppSettings.defaultPrompt {
-                                    Button("Reset") {
-                                        settings.customPrompt = AppSettings.defaultPrompt
-                                    }
-                                    .font(.system(size: 11))
-                                    .buttonStyle(.plain)
-                                    .foregroundStyle(.secondary)
-                                }
-                            }
+                            promptEditor(
+                                title: "System Prompt",
+                                text: $settings.customSystemPrompt,
+                                defaultValue: AppSettings.defaultSystemPrompt,
+                                hint: "规则、示例等稳定指令（支持 prompt cache）"
+                            )
                             
-                            TextEditor(text: $settings.customPrompt)
-                                .font(.system(size: 12, design: .monospaced))
-                                .frame(minHeight: 80)
-                                .scrollContentBackground(.hidden)
-                                .padding(8)
-                                .background(.secondary.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .strokeBorder(.secondary.opacity(0.2), lineWidth: 1)
-                                )
-                            
-                            Text("Use {{context}} for app context, {{vocabulary}} for custom vocabulary")
-                                .font(.system(size: 10))
+                            promptEditor(
+                                title: "User Prompt",
+                                text: $settings.customUserPrompt,
+                                defaultValue: AppSettings.defaultUserPrompt,
+                                hint: "{{context}} = 应用上下文, {{vocabulary}} = 词表, {{text}} = 转录文本"
+                            )
                                 .foregroundStyle(.tertiary)
                         }
                     }
@@ -250,14 +236,10 @@ struct SpeechSettingsView: View {
                 HStack {
                     TextField("Add word or phrase", text: $newVocabWord)
                         .textFieldStyle(.roundedBorder)
-                    Button("Add") {
-                        if !newVocabWord.isEmpty {
-                            settings.customVocabulary.append(newVocabWord)
-                            newVocabWord = ""
-                        }
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(newVocabWord.isEmpty)
+                        .onSubmit { addVocabWord() }
+                    Button("Add") { addVocabWord() }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(newVocabWord.isEmpty)
                 }
                 .padding()
                 
@@ -290,6 +272,46 @@ struct SpeechSettingsView: View {
                 RoundedRectangle(cornerRadius: 12)
                     .strokeBorder(.secondary.opacity(0.1), lineWidth: 1)
             )
+        }
+    }
+    
+    private func addVocabWord() {
+        let trimmed = newVocabWord.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        settings.customVocabulary.append(trimmed)
+        newVocabWord = ""
+    }
+    
+    private func promptEditor(title: String, text: Binding<String>, defaultValue: String, hint: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(title)
+                    .font(.system(size: 12, weight: .medium))
+                Spacer()
+                if text.wrappedValue != defaultValue {
+                    Button("Reset") {
+                        text.wrappedValue = defaultValue
+                    }
+                    .font(.system(size: 11))
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                }
+            }
+            
+            TextEditor(text: text)
+                .font(.system(size: 12, design: .monospaced))
+                .frame(minHeight: 60)
+                .scrollContentBackground(.hidden)
+                .padding(8)
+                .background(.secondary.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .strokeBorder(.secondary.opacity(0.2), lineWidth: 1)
+                )
+            
+            Text(hint)
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
         }
     }
 }
