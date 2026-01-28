@@ -1,6 +1,8 @@
 # Plaid
 
-A modern macOS voice-to-text application with local model support, LLM correction, and a sleek floating pill interface.
+**Expanding human-computer interaction bandwidth.**
+
+A modern macOS voice-to-text application with local model support, LLM correction, and a sleek floating pill interface. Your voice becomes a faster input channel than typing.
 
 <p align="center">
   <img src="icon2_zoomed.png" width="128" alt="Plaid Icon">
