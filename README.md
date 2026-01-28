@@ -65,32 +65,22 @@ For offline usage, download a local model in Settings → Speech → Local Model
 ### In Progress
 - [ ] Apple Developer Program renewal & proper code signing
 
-### Transcription Quality Improvements
-- [ ] **Hot words / Custom vocabulary** - Boost recognition of specific terms, names, and jargon
-- [ ] **Accent adaptation** - Better handling of regional accents and non-native speakers
-- [ ] **Context-aware recognition** - Use active app context to improve accuracy (e.g., code terms in IDE, medical terms in health apps)
-- [ ] **Noise profiling** - Learn and adapt to user's typical environment
-- [ ] **Personal language model** - Fine-tune on user's vocabulary and speaking patterns
-- [ ] **Multi-pass correction** - Re-process with context for higher accuracy
+### Short-term Focus
 
-### Planned Features
-- [ ] **Streaming transcription** - Real-time text output while speaking
-- [ ] **Multiple language detection** - Auto-detect language per utterance
-- [ ] **Custom wake word** - Trigger recording with voice command
-- [ ] **Audio history** - Review and re-transcribe past recordings
-- [ ] **Shortcuts integration** - macOS Shortcuts support for automation
-- [ ] **Menu bar waveform** - Show audio levels in menu bar icon
-- [ ] **Speaker diarization** - Identify different speakers
-- [ ] **Translation mode** - Transcribe and translate in one step
-- [ ] **Whisper Large model** - Higher accuracy local option
-- [ ] **iOS companion app** - Sync transcriptions across devices
-
-### Technical Improvements
+**Performance**
 - [ ] Reduce memory footprint for local models
 - [ ] Improve cold start time
-- [ ] Add VAD-based auto-stop recording
-- [ ] Support for Apple Silicon Neural Engine acceleration
-- [ ] Implement audio preprocessing (noise reduction, normalization)
+- [ ] Optimize audio pipeline latency
+
+**Recognition Accuracy**
+- [ ] Hot words / custom vocabulary support
+- [ ] Better accent and noise handling
+- [ ] Context-aware recognition hints
+
+**Computer Use Integration**
+- [ ] Tighter integration with Claude computer use
+- [ ] App-aware context injection
+- [ ] Streamlined voice-to-action workflows
 
 ## Building from Source
 
