@@ -1,6 +1,7 @@
 import Foundation
 import Speech
 import AVFoundation
+import Accelerate
 
 // MARK: - Multipart Form Builder
 
@@ -277,6 +278,8 @@ class STTService: ObservableObject {
                 }
             }
             
+            Self.normalizeAudioFile(at: fileURL)
+            
             if settings.enableDenoising && SpeechDenoiserService.shared.isModelAvailable {
                 if let denoisedURL = try? SpeechDenoiserService.shared.denoise(fileURL: fileURL) {
                     try? FileManager.default.removeItem(at: fileURL)
@@ -550,6 +553,28 @@ class STTService: ObservableObject {
         case .glmASR:
             return try await transcribeWithGLM()
         }
+    }
+    
+    private static func normalizeAudioFile(at url: URL, targetPeak: Float = 0.9) {
+        guard let audioFile = try? AVAudioFile(forReading: url) else { return }
+        let format = audioFile.processingFormat
+        let frameCount = AVAudioFrameCount(audioFile.length)
+        guard frameCount > 0,
+              let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount),
+              let _ = try? audioFile.read(into: buffer),
+              let channelData = buffer.floatChannelData?[0] else { return }
+        
+        let length = vDSP_Length(buffer.frameLength)
+        var peak: Float = 0
+        vDSP_maxmgv(channelData, 1, &peak, length)
+        
+        guard peak > 0.001, abs(peak - targetPeak) > 0.05 else { return }
+        
+        var gain = targetPeak / peak
+        vDSP_vsmul(channelData, 1, &gain, channelData, 1, length)
+        
+        guard let outputFile = try? AVAudioFile(forWriting: url, settings: format.settings) else { return }
+        try? outputFile.write(from: buffer)
     }
     
     private func calculateAudioLevel(buffer: AVAudioPCMBuffer) {
