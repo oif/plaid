@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>自然说话，即时输入。</strong><br>
+  <strong>你的声音，你的界面。</strong><br>
   <em>拓宽人机交互带宽。</em>
 </p>
 

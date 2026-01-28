@@ -2,6 +2,21 @@ import Foundation
 import SwiftData
 
 @Model
+final class CumulativeStats {
+    var totalWords: Int
+    var totalSessions: Int
+    var totalUsageSeconds: Double
+    var lastUpdated: Date
+    
+    init() {
+        self.totalWords = 0
+        self.totalSessions = 0
+        self.totalUsageSeconds = 0
+        self.lastUpdated = Date()
+    }
+}
+
+@Model
 final class TranscriptionRecord {
     var id: UUID
     var timestamp: Date
@@ -92,20 +107,57 @@ class TranscriptionHistoryService: ObservableObject {
     private var modelContext: ModelContext?
     
     @Published var recentRecords: [TranscriptionRecord] = []
+    @Published private(set) var cumulativeStats: CumulativeStats?
     
     private init() {
         setupContainer()
         loadRecentRecords()
+        loadCumulativeStats()
     }
     
     private func setupContainer() {
         do {
-            let schema = Schema([TranscriptionRecord.self])
+            let schema = Schema([TranscriptionRecord.self, CumulativeStats.self])
             let config = ModelConfiguration(isStoredInMemoryOnly: false)
             modelContainer = try ModelContainer(for: schema, configurations: config)
             modelContext = modelContainer?.mainContext
         } catch {
             print("Failed to setup SwiftData: \(error)")
+        }
+    }
+    
+    private func loadCumulativeStats() {
+        guard let context = modelContext else { return }
+        
+        let descriptor = FetchDescriptor<CumulativeStats>()
+        
+        do {
+            let stats = try context.fetch(descriptor)
+            if let existing = stats.first {
+                cumulativeStats = existing
+            } else {
+                let newStats = CumulativeStats()
+                context.insert(newStats)
+                try context.save()
+                cumulativeStats = newStats
+            }
+        } catch {
+            print("Failed to load cumulative stats: \(error)")
+        }
+    }
+    
+    private func updateCumulativeStats(words: Int, usageSeconds: Double) {
+        guard let stats = cumulativeStats, let context = modelContext else { return }
+        
+        stats.totalWords += words
+        stats.totalSessions += 1
+        stats.totalUsageSeconds += usageSeconds
+        stats.lastUpdated = Date()
+        
+        do {
+            try context.save()
+        } catch {
+            print("Failed to update cumulative stats: \(error)")
         }
     }
     
@@ -130,6 +182,10 @@ class TranscriptionHistoryService: ObservableObject {
         
         do {
             try context.save()
+            
+            let usageSeconds = sttDuration + (llmDuration ?? 0)
+            updateCumulativeStats(words: record.wordCount, usageSeconds: usageSeconds)
+            
             loadRecentRecords()
         } catch {
             print("Failed to save record: \(error)")
@@ -185,12 +241,16 @@ class TranscriptionHistoryService: ObservableObject {
         return recentRecords.filter { calendar.isDate($0.timestamp, inSameDayAs: today) }.count
     }
     
-    var totalCharacters: Int {
-        recentRecords.reduce(0) { $0 + $1.characterCount }
+    var totalWords: Int {
+        cumulativeStats?.totalWords ?? recentRecords.reduce(0) { $0 + $1.wordCount }
     }
     
-    var totalWords: Int {
-        recentRecords.reduce(0) { $0 + $1.wordCount }
+    var totalSessions: Int {
+        cumulativeStats?.totalSessions ?? recentRecords.count
+    }
+    
+    var totalUsageSeconds: Double {
+        cumulativeStats?.totalUsageSeconds ?? recentRecords.reduce(0.0) { $0 + $1.sttDuration + ($1.llmDuration ?? 0) }
     }
     
     var todayWords: Int {
@@ -220,14 +280,14 @@ class TranscriptionHistoryService: ObservableObject {
     
     var timeSavedMinutes: Double {
         let typingMinutes = Double(totalWords) / Self.typingWPM
-        let actualMinutes = recentRecords.reduce(0.0) { $0 + $1.sttDuration + ($1.llmDuration ?? 0) } / 60.0
+        let actualMinutes = totalUsageSeconds / 60.0
         return max(0, typingMinutes - actualMinutes)
     }
     
     static let typingWPM: Double = 40.0
     
     var voiceWPM: Double {
-        let totalDurationMinutes = recentRecords.reduce(0.0) { $0 + $1.sttDuration + ($1.llmDuration ?? 0) } / 60.0
+        let totalDurationMinutes = totalUsageSeconds / 60.0
         guard totalDurationMinutes > 0.01 else { return 0 }
         return Double(totalWords) / totalDurationMinutes
     }

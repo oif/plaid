@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>Speak naturally. Type instantly.</strong><br>
+  <strong>Your voice, your interface.</strong><br>
   <em>Expanding human-computer interaction bandwidth.</em>
 </p>
 

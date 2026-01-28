@@ -106,6 +106,7 @@ struct ContentView: View {
     @State private var selectedSettingsSection: SettingsSection = .general
     @State private var showFileImporter = false
     @State private var emptyStatePulse = false
+    @State private var showClearHistoryConfirmation = false
     
     @ObservedObject private var historyService = TranscriptionHistoryService.shared
     
@@ -191,11 +192,33 @@ struct ContentView: View {
                         Text("\(historyService.recentRecords.count)")
                             .font(.system(size: 10, weight: .medium, design: .rounded))
                             .foregroundStyle(.tertiary)
+                        
+                        Button {
+                            showClearHistoryConfirmation = true
+                        } label: {
+                            Image(systemName: "trash")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.tertiary)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Clear history")
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
                     
                     recordsList
+                }
+                .confirmationDialog(
+                    "Clear History",
+                    isPresented: $showClearHistoryConfirmation,
+                    titleVisibility: .visible
+                ) {
+                    Button("Clear All Records", role: .destructive) {
+                        historyService.clearHistory()
+                    }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("This will delete all transcription records. Your cumulative statistics (total words, time saved) will be preserved.")
                 }
             }
         }

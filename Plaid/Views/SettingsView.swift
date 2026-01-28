@@ -437,7 +437,7 @@ struct SettingsContentView: View {
                         .foregroundStyle(.secondary)
                 }
                 
-                Text("Speak naturally. Type instantly.")
+                Text("Your voice, your interface.")
                     .font(.headline)
                     .foregroundStyle(.secondary)
                 
