@@ -1,5 +1,8 @@
 import Foundation
 import Combine
+import os.log
+
+private let logger = Logger(subsystem: "com.neospaceindustries.plaid", category: "Pill")
 
 @MainActor
 class TranscriptionPillState: ObservableObject {
@@ -8,8 +11,10 @@ class TranscriptionPillState: ObservableObject {
     @Published var isProcessing = false
     @Published var errorMessage: String?
     @Published var waveformLevels: [Float] = Array(repeating: 0.1, count: 12)
+    @Published var recordingDuration: TimeInterval = 0
     
     private var cancellables = Set<AnyCancellable>()
+    private var durationCancellable: AnyCancellable?
     
     var onComplete: ((String) -> Void)?
     var onCancel: (() -> Void)?
@@ -33,6 +38,7 @@ class TranscriptionPillState: ObservableObject {
     }
     
     func show() {
+        logger.info("show: isVisible→true, starting recording")
         isVisible = true
         startRecording()
     }
@@ -43,6 +49,8 @@ class TranscriptionPillState: ObservableObject {
         isProcessing = false
         errorMessage = nil
         waveformLevels = Array(repeating: 0.1, count: 12)
+        recordingDuration = 0
+        stopDurationTimer()
         onHide?()
     }
     
@@ -61,15 +69,35 @@ class TranscriptionPillState: ObservableObject {
     func startRecording() {
         isRecording = true
         errorMessage = nil
+        recordingDuration = 0
+        startDurationTimer()
+        logger.info("startRecording: launching SpeechService.startListening")
         
         Task {
             do {
                 try await SpeechService.shared.startListening()
+                logger.info("startRecording: listening started")
             } catch {
+                logger.error("startRecording failed: \(error.localizedDescription)")
                 isRecording = false
+                stopDurationTimer()
                 showError(friendlyError(error))
             }
         }
+    }
+    
+    private func startDurationTimer() {
+        let start = Date()
+        durationCancellable = Timer.publish(every: 1.0, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in
+                self?.recordingDuration = Date().timeIntervalSince(start)
+            }
+    }
+    
+    private func stopDurationTimer() {
+        durationCancellable?.cancel()
+        durationCancellable = nil
     }
     
     private func friendlyError(_ error: Error) -> String {
@@ -100,6 +128,7 @@ class TranscriptionPillState: ObservableObject {
         
         isRecording = false
         isProcessing = true
+        stopDurationTimer()
         
         Task {
             do {

@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 import os.log
 
-private let logger = Logger(subsystem: "com.thyper", category: "PillController")
+private let logger = Logger(subsystem: "com.neospaceindustries.plaid", category: "Pill")
 
 class ClickablePanel: NSPanel {
     override var canBecomeKey: Bool { true }
@@ -79,6 +79,7 @@ class TranscriptionPillController {
     }
     
     func toggle() {
+        logger.info("toggle: isShowing=\(self.isShowing)")
         if isShowing {
             pillState.toggle()
         } else {
@@ -87,11 +88,19 @@ class TranscriptionPillController {
     }
     
     func show() {
-        guard !isShowing else { return }
-        guard let panel = panel else { return }
+        guard !isShowing else {
+            logger.debug("show: already showing")
+            return
+        }
+        guard let panel = panel else {
+            logger.error("show: panel is nil")
+            return
+        }
         
         let screen = activeScreen()
         isShowing = true
+        
+        pillState.show()
         
         let screenFrame = screen.visibleFrame
         let panelSize = panel.frame.size
@@ -100,8 +109,7 @@ class TranscriptionPillController {
         
         panel.setFrameOrigin(NSPoint(x: x, y: y))
         panel.orderFrontRegardless()
-        
-        pillState.show()
+        logger.info("show: pill visible at (\(x), \(y))")
     }
     
     private func activeScreen() -> NSScreen {

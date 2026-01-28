@@ -1,4 +1,7 @@
 import Foundation
+import os.log
+
+private let logger = Logger(subsystem: "com.neospaceindustries.plaid", category: "LLM")
 
 @MainActor
 class LLMService {
@@ -64,7 +67,7 @@ class LLMService {
         request.timeoutInterval = 60
         
         let requestStart = Date()
-        print("🚀 LLM Request: \(model) @ \(url.host ?? "unknown")")
+        logger.info("LLM request: \(model) @ \(url.host ?? "unknown")")
         
         if useStreaming {
             return try await streamingRequest(request: request, onPartial: onPartial!, requestStart: requestStart)
@@ -77,19 +80,19 @@ class LLMService {
         let (data, response) = try await NetworkSession.shared.data(for: request)
         
         let ttfb = Date().timeIntervalSince(requestStart)
-        print("⏱️ LLM TTFB: \(String(format: "%.2fs", ttfb))")
+        logger.debug("LLM TTFB: \(String(format: "%.2fs", ttfb))")
         
         guard let httpResponse = response as? HTTPURLResponse else {
             throw LLMError.apiError
         }
         
-        print("📥 LLM Status: \(httpResponse.statusCode), Size: \(data.count) bytes")
+        logger.debug("LLM status: \(httpResponse.statusCode), size: \(data.count) bytes")
         
         guard httpResponse.statusCode == 200 else {
             if let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let error = errorJson["error"] as? [String: Any],
                let message = error["message"] as? String {
-                print("❌ LLM Error: \(message)")
+                logger.error("LLM error: \(message)")
                 throw LLMError.serverError(message)
             }
             throw LLMError.httpError(httpResponse.statusCode)
@@ -104,7 +107,7 @@ class LLMService {
         }
         
         let totalTime = Date().timeIntervalSince(requestStart)
-        print("✅ LLM Complete: \(String(format: "%.2fs", totalTime)) total")
+        logger.info("LLM complete: \(String(format: "%.2fs", totalTime)) total")
         
         return content.trimmingCharacters(in: .whitespacesAndNewlines)
     }
@@ -113,7 +116,7 @@ class LLMService {
         let (bytes, response) = try await NetworkSession.shared.bytes(for: request)
         
         let ttfb = Date().timeIntervalSince(requestStart)
-        print("⏱️ LLM TTFB (stream): \(String(format: "%.2fs", ttfb))")
+        logger.debug("LLM TTFB (stream): \(String(format: "%.2fs", ttfb))")
         
         guard let httpResponse = response as? HTTPURLResponse else {
             throw LLMError.apiError
@@ -127,7 +130,7 @@ class LLMService {
             if let errorJson = try? JSONSerialization.jsonObject(with: errorData) as? [String: Any],
                let error = errorJson["error"] as? [String: Any],
                let message = error["message"] as? String {
-                print("❌ LLM Error: \(message)")
+                logger.error("LLM error: \(message)")
                 throw LLMError.serverError(message)
             }
             throw LLMError.httpError(httpResponse.statusCode)
@@ -153,7 +156,7 @@ class LLMService {
                     if firstTokenTime == nil {
                         firstTokenTime = Date()
                         let ttft = firstTokenTime!.timeIntervalSince(requestStart)
-                        print("⚡ LLM First Token: \(String(format: "%.2fs", ttft))")
+                        logger.debug("LLM first token: \(String(format: "%.2fs", ttft))")
                     }
                     
                     fullContent += content
@@ -163,7 +166,7 @@ class LLMService {
         }
         
         let totalTime = Date().timeIntervalSince(requestStart)
-        print("✅ LLM Stream Complete: \(String(format: "%.2fs", totalTime)) total, \(fullContent.count) chars")
+        logger.info("LLM stream complete: \(String(format: "%.2fs", totalTime)) total, \(fullContent.count) chars")
         
         return fullContent.trimmingCharacters(in: .whitespacesAndNewlines)
     }

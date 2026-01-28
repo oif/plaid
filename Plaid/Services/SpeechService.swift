@@ -43,14 +43,19 @@ class SpeechService: ObservableObject {
             .store(in: &cancellables)
     }
     
+    private var waveformLevelBuffer = [Float](repeating: 0.1, count: 12)
+    
     private func updateWaveform(from samples: [Float]) {
         guard isListening else { return }
         let count = 12
         if samples.count >= count {
-            waveformLevels = Array(samples.suffix(count))
+            let start = samples.count - count
+            for i in 0..<count { waveformLevelBuffer[i] = samples[start + i] }
         } else {
-            waveformLevels = samples + Array(repeating: 0.1, count: count - samples.count)
+            for i in 0..<samples.count { waveformLevelBuffer[i] = samples[i] }
+            for i in samples.count..<count { waveformLevelBuffer[i] = 0.1 }
         }
+        waveformLevels = waveformLevelBuffer
     }
     
     func initialize() async throws {

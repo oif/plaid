@@ -92,6 +92,8 @@ class AppState: ObservableObject {
             appContext.requestAccessibilityPermission()
         }
         
+        setupTranscriptionPill()
+        
         do {
             try await SpeechService.shared.initialize()
             
@@ -99,8 +101,6 @@ class AppState: ObservableObject {
                 statusMessage = "Loading model..."
                 await preloadLocalModel()
             }
-            
-            setupTranscriptionPill()
             
             statusMessage = "Ready"
         } catch {

@@ -553,75 +553,22 @@ class STTService: ObservableObject {
         }
     }
     
-    private static func normalizeAudioFile(at url: URL, targetPeak: Float = 0.9) {
-        guard let audioFile = try? AVAudioFile(forReading: url) else { return }
-        let fileFormat = audioFile.fileFormat
-        let frameCount = AVAudioFrameCount(audioFile.length)
-        
-        let intFormat = AVAudioFormat(
-            commonFormat: .pcmFormatInt16,
-            sampleRate: fileFormat.sampleRate,
-            channels: fileFormat.channelCount,
-            interleaved: true
-        )!
-        
-        guard frameCount > 0,
-              let intBuffer = AVAudioPCMBuffer(pcmFormat: intFormat, frameCapacity: frameCount),
-              let _ = try? audioFile.read(into: intBuffer),
-              let int16Data = intBuffer.int16ChannelData?[0] else { return }
-        
-        let count = Int(intBuffer.frameLength)
-        var floatSamples = [Float](repeating: 0, count: count)
-        vDSP_vflt16(int16Data, 1, &floatSamples, 1, vDSP_Length(count))
-        
-        var peak: Float = 0
-        vDSP_maxmgv(&floatSamples, 1, &peak, vDSP_Length(count))
-        
-        let scale: Float = 32767.0
-        guard peak > scale * 0.001, abs(peak / scale - targetPeak) > 0.05 else { return }
-        
-        var gain = targetPeak * scale / peak
-        var scaled = [Float](repeating: 0, count: count)
-        vDSP_vsmul(&floatSamples, 1, &gain, &scaled, 1, vDSP_Length(count))
-        
-        var clampMin: Float = -32768
-        var clampMax: Float = 32767
-        vDSP_vclip(&scaled, 1, &clampMin, &clampMax, &floatSamples, 1, vDSP_Length(count))
-        
-        for i in 0..<count {
-            int16Data[i] = Int16(floatSamples[i])
-        }
-        
-        let tmpURL = url.deletingLastPathComponent().appendingPathComponent("norm_\(UUID().uuidString).wav")
-        guard let outputFile = try? AVAudioFile(forWriting: tmpURL, settings: intFormat.settings) else { return }
-        do {
-            try outputFile.write(from: intBuffer)
-            _ = try FileManager.default.replaceItemAt(url, withItemAt: tmpURL)
-        } catch {
-            try? FileManager.default.removeItem(at: tmpURL)
-        }
-    }
     
     private func calculateAudioLevel(buffer: AVAudioPCMBuffer) {
         guard let channelData = buffer.floatChannelData?[0] else { return }
-        let frameLength = Int(buffer.frameLength)
+        let length = vDSP_Length(buffer.frameLength)
         
-        var sum: Float = 0
-        var maxSample: Float = 0
-        for i in 0..<frameLength {
-            let sample = abs(channelData[i])
-            sum += sample * sample
-            if sample > maxSample { maxSample = sample }
-        }
+        var rms: Float = 0
+        vDSP_rmsqv(channelData, 1, &rms, length)
         
-        let rms = sqrt(sum / Float(frameLength))
+        var peak: Float = 0
+        vDSP_maxmgv(channelData, 1, &peak, length)
+        
         let level = min(1.0, rms * 5)
-        let capturedMaxSample = maxSample
+        let normalizedSample = min(1.0, peak * 3)
         
         Task { @MainActor in
             self.audioLevel = level
-            
-            let normalizedSample = min(1.0, capturedMaxSample * 3)
             self.waveformSamples.append(normalizedSample)
             if self.waveformSamples.count > 40 {
                 self.waveformSamples.removeFirst()

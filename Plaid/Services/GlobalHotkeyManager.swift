@@ -152,10 +152,13 @@ class GlobalHotkeyManager {
             
             if type == .keyDown && isHotkey {
                 guard GlobalHotkeyManager.shouldTrigger() else {
+                    DispatchQueue.main.async {
+                        Logger.hotkey.debug("Hotkey debounced (too fast)")
+                    }
                     return nil
                 }
                 DispatchQueue.main.async {
-                    Logger.hotkey.debug("Hotkey triggered")
+                    Logger.hotkey.info("Hotkey triggered, callback=\(manager.onHotkeyPressed != nil)")
                     manager.onHotkeyPressed?()
                 }
                 return nil

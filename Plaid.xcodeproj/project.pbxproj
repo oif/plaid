@@ -20,10 +20,7 @@
 		A10000010000000000000013 /* CompactWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000015 /* CompactWindowView.swift */; };
 		A10000010000000000000017 /* ModelManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000017 /* ModelManager.swift */; };
 		A10000010000000000000018 /* SherpaOnnxService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000018 /* SherpaOnnxService.swift */; };
-		A10000010000000000000034 /* AudioTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000034 /* AudioTypes.swift */; };
-		A10000010000000000000040 /* VADProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000040 /* VADProcessor.swift */; };
-		A10000010000000000000041 /* AudioPipelineDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000041 /* AudioPipelineDelegate.swift */; };
-		A10000010000000000000042 /* AudioPipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000042 /* AudioPipeline.swift */; };
+
 		A10000010000000000000043 /* AudioInputManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000043 /* AudioInputManager.swift */; };
 		B513EBF02F27920F005F4669 /* GlobalHotkeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B513EBED2F27920F005F4669 /* GlobalHotkeyManager.swift */; };
 		B513EBF12F27920F005F4669 /* TranscriptionPillController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B513EBEE2F27920F005F4669 /* TranscriptionPillController.swift */; };
@@ -75,10 +72,7 @@
 		A20000010000000000000018 /* SherpaOnnxService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SherpaOnnxService.swift; sourceTree = "<group>"; };
 		A20000010000000000000019 /* Plaid-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Plaid-Bridging-Header.h"; sourceTree = "<group>"; };
 		A20000010000000000000021 /* sherpa-onnx.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = "sherpa-onnx.xcframework"; path = "../Frameworks/sherpa-onnx.xcframework"; sourceTree = "<group>"; };
-		A20000010000000000000034 /* AudioTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioTypes.swift; sourceTree = "<group>"; };
-		A20000010000000000000040 /* VADProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VADProcessor.swift; sourceTree = "<group>"; };
-		A20000010000000000000041 /* AudioPipelineDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPipelineDelegate.swift; sourceTree = "<group>"; };
-		A20000010000000000000042 /* AudioPipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPipeline.swift; sourceTree = "<group>"; };
+
 		A20000010000000000000043 /* AudioInputManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioInputManager.swift; sourceTree = "<group>"; };
 		B513EBED2F27920F005F4669 /* GlobalHotkeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalHotkeyManager.swift; sourceTree = "<group>"; };
 		B513EBEE2F27920F005F4669 /* TranscriptionPillController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionPillController.swift; sourceTree = "<group>"; };
@@ -187,7 +181,7 @@
 				A20000010000000000000010 /* Settings.swift */,
 				A20000010000000000000017 /* ModelManager.swift */,
 				A20000010000000000000018 /* SherpaOnnxService.swift */,
-				A20000010000000000000034 /* AudioTypes.swift */,
+
 				B513EC112F27D100005F4669 /* SparkleUpdater.swift */,
 				B513EC512F28B000005F4669 /* AppDirectories.swift */,
 			);
@@ -265,9 +259,7 @@
 			children = (
 				B513EBF52F279537005F4669 /* SileroVADService.swift */,
 				B513EBF72F279600005F4669 /* SpeechDenoiserService.swift */,
-				A20000010000000000000040 /* VADProcessor.swift */,
-				A20000010000000000000041 /* AudioPipelineDelegate.swift */,
-				A20000010000000000000042 /* AudioPipeline.swift */,
+
 				A20000010000000000000043 /* AudioInputManager.swift */,
 			);
 			path = Audio;
@@ -352,14 +344,13 @@
 			files = (
 				A10000010000000000000001 /* PlaidApp.swift in Sources */,
 				A10000010000000000000002 /* ContentView.swift in Sources */,
-				A10000010000000000000040 /* VADProcessor.swift in Sources */,
-				A10000010000000000000041 /* AudioPipelineDelegate.swift in Sources */,
+
 				B513EBF02F27920F005F4669 /* GlobalHotkeyManager.swift in Sources */,
 				B513EBF12F27920F005F4669 /* TranscriptionPillController.swift in Sources */,
 				B513EBF42F27921B005F4669 /* TranscriptionPillView.swift in Sources */,
 				B513EC202F27E000005F4669 /* GlassCompat.swift in Sources */,
 				B513EBF22F27920F005F4669 /* TranscriptionPillState.swift in Sources */,
-				A10000010000000000000042 /* AudioPipeline.swift in Sources */,
+
 				A10000010000000000000043 /* AudioInputManager.swift in Sources */,
 				A10000010000000000000005 /* STTService.swift in Sources */,
 				B513EBF62F279537005F4669 /* SileroVADService.swift in Sources */,
@@ -369,7 +360,7 @@
 				A10000010000000000000008 /* TextInjector.swift in Sources */,
 				A10000010000000000000009 /* SettingsView.swift in Sources */,
 				A10000010000000000000010 /* Settings.swift in Sources */,
-				A10000010000000000000034 /* AudioTypes.swift in Sources */,
+
 				A10000010000000000000011 /* AudioWaveformView.swift in Sources */,
 				A10000010000000000000013 /* CompactWindowView.swift in Sources */,
 				A10000010000000000000017 /* ModelManager.swift in Sources */,
@@ -392,6 +383,7 @@
 				F513EC962F28D000005F4669 /* IntegrationsSettingsView.swift in Sources */,
 				F513EC982F28D000005F4669 /* AboutSettingsView.swift in Sources */,
 				F513EC9A2F28D000005F4669 /* DiagnosticsSettingsView.swift in Sources */,
+
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
