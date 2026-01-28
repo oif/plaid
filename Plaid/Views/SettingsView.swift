@@ -13,6 +13,7 @@ struct SettingsContentView: View {
     @State private var elevenLabsApiKey = ""
     @State private var sonioxApiKey = ""
     @State private var glmApiKey = ""
+    @State private var plaidCloudApiKey = ""
     
     var body: some View {
         Group {
@@ -40,6 +41,7 @@ struct SettingsContentView: View {
             elevenLabsApiKey = settings.elevenLabsApiKey
             sonioxApiKey = settings.sonioxApiKey
             glmApiKey = settings.glmApiKey
+            plaidCloudApiKey = settings.plaidCloudApiKey
         }
     }
     
@@ -54,7 +56,8 @@ struct SettingsContentView: View {
             customLLMApiKey: $customLLMApiKey,
             elevenLabsApiKey: $elevenLabsApiKey,
             sonioxApiKey: $sonioxApiKey,
-            glmApiKey: $glmApiKey
+            glmApiKey: $glmApiKey,
+            plaidCloudApiKey: $plaidCloudApiKey
         )
     }
     

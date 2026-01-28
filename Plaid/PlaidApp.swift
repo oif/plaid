@@ -188,7 +188,11 @@ class AppState: ObservableObject {
             timing.totalDuration = Date().timeIntervalSince(totalStart)
             statusMessage = "Done"
             
-            Logger.stt.info("Timing: Recording=\(self.timing.formattedRecording), STT=\(self.timing.formattedSTT), LLM=\(self.timing.formattedLLM), Inject=\(self.timing.formattedInject), Total=\(self.timing.formattedTotal)")
+            if settings.sttProvider == .plaidCloud {
+                Logger.stt.info("Timing [Cloud]: Recording=\(self.timing.formattedRecording), Cloud=\(self.timing.formattedSTT), Inject=\(self.timing.formattedInject), Total=\(self.timing.formattedTotal)")
+            } else {
+                Logger.stt.info("Timing: Recording=\(self.timing.formattedRecording), STT=\(self.timing.formattedSTT), LLM=\(self.timing.formattedLLM), Inject=\(self.timing.formattedInject), Total=\(self.timing.formattedTotal)")
+            }
             
         } catch {
             statusMessage = "Error: \(error.localizedDescription)"
@@ -227,7 +231,11 @@ class AppState: ObservableObject {
             timing.totalDuration = Date().timeIntervalSince(totalStart)
             statusMessage = "Done"
             
-            Logger.stt.info("File Timing: STT=\(self.timing.formattedSTT), LLM=\(self.timing.formattedLLM), Total=\(self.timing.formattedTotal)")
+            if settings.sttProvider == .plaidCloud {
+                Logger.stt.info("File Timing [Cloud]: Cloud=\(self.timing.formattedSTT), Total=\(self.timing.formattedTotal)")
+            } else {
+                Logger.stt.info("File Timing: STT=\(self.timing.formattedSTT), LLM=\(self.timing.formattedLLM), Total=\(self.timing.formattedTotal)")
+            }
             
         } catch {
             statusMessage = "Error: \(error.localizedDescription)"

@@ -528,6 +528,15 @@ struct PerformanceCard: View {
                 emptyState
             } else {
                 VStack(spacing: PlaidSpacing.md) {
+                    if let cloud = stats.avgCloudLatency {
+                        metricRow(
+                            label: "Cloud Latency",
+                            value: formatLatency(cloud),
+                            detail: "Plaid Cloud 端到端耗时",
+                            color: cloud < 2 ? .green : cloud < 5 ? .orange : .red
+                        )
+                    }
+                    
                     if let rtf = stats.realtimeFactor {
                         metricRow(
                             label: "Realtime Factor",
@@ -537,12 +546,14 @@ struct PerformanceCard: View {
                         )
                     }
                     
-                    metricRow(
-                        label: "STT Latency",
-                        value: formatLatency(stats.avgSTTLatency),
-                        detail: "语音识别平均耗时",
-                        color: stats.avgSTTLatency < 1 ? .green : stats.avgSTTLatency < 3 ? .orange : .red
-                    )
+                    if stats.avgSTTLatency > 0 {
+                        metricRow(
+                            label: "STT Latency",
+                            value: formatLatency(stats.avgSTTLatency),
+                            detail: "语音识别平均耗时",
+                            color: stats.avgSTTLatency < 1 ? .green : stats.avgSTTLatency < 3 ? .orange : .red
+                        )
+                    }
                     
                     if let llm = stats.avgLLMLatency {
                         metricRow(

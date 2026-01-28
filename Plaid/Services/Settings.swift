@@ -105,6 +105,17 @@ class AppSettings: ObservableObject {
         set { KeychainHelper.save(key: "glm_key", value: newValue) }
     }
     
+    // MARK: - Plaid Cloud Settings
+    
+    @Published var plaidCloudEndpoint: String {
+        didSet { defaults.set(plaidCloudEndpoint, forKey: "plaidCloudEndpoint") }
+    }
+    
+    var plaidCloudApiKey: String {
+        get { KeychainHelper.load(key: "plaid_cloud_key") ?? "" }
+        set { KeychainHelper.save(key: "plaid_cloud_key", value: newValue) }
+    }
+    
     // MARK: - LLM Settings
     
     @Published var enableLLMCorrection: Bool {
@@ -190,6 +201,7 @@ class AppSettings: ObservableObject {
         self.language = defaults.string(forKey: "language") ?? "en-US"
         self.customSTTEndpoint = defaults.string(forKey: "customSTTEndpoint") ?? ""
         self.customSTTModel = defaults.string(forKey: "customSTTModel") ?? "whisper-1"
+        self.plaidCloudEndpoint = defaults.string(forKey: "plaidCloudEndpoint") ?? "https://cloud.plaid.app"
         
         // LLM
         self.enableLLMCorrection = defaults.object(forKey: "enableLLMCorrection") as? Bool ?? true
@@ -299,6 +311,15 @@ class AppSettings: ObservableObject {
             return "https://open.bigmodel.cn/api/paas/v4/audio/transcriptions"
         case .customAPI:
             return customSTTEndpoint.trimmingCharacters(in: .whitespacesAndNewlines)
+        case .plaidCloud:
+            let base = plaidCloudEndpoint.trimmingCharacters(in: .whitespacesAndNewlines)
+            if base.hasSuffix("/v1/transcribe") {
+                return base
+            } else if base.hasSuffix("/") {
+                return base + "v1/transcribe"
+            } else {
+                return base + "/v1/transcribe"
+            }
         }
     }
     
@@ -316,6 +337,8 @@ class AppSettings: ObservableObject {
             return glmApiKey
         case .customAPI:
             return customSTTApiKey
+        case .plaidCloud:
+            return plaidCloudApiKey
         }
     }
 }
@@ -330,6 +353,7 @@ enum STTProvider: String, CaseIterable {
     case soniox = "soniox"
     case glmASR = "glm"
     case customAPI = "custom"
+    case plaidCloud = "plaid_cloud"
     
     var displayName: String {
         switch self {
@@ -340,6 +364,7 @@ enum STTProvider: String, CaseIterable {
         case .soniox: return "Soniox"
         case .glmASR: return "GLM ASR"
         case .customAPI: return "Custom API"
+        case .plaidCloud: return "Plaid Cloud"
         }
     }
     
@@ -352,12 +377,21 @@ enum STTProvider: String, CaseIterable {
         case .soniox: return "s.circle.fill"
         case .glmASR: return "g.circle.fill"
         case .customAPI: return "server.rack"
+        case .plaidCloud: return "bolt.fill"
         }
     }
     
     var isLocal: Bool {
         switch self {
         case .appleSpeech, .sherpaLocal: return true
+        default: return false
+        }
+    }
+    
+    /// Whether this provider handles both STT and LLM correction server-side
+    var includesLLMCorrection: Bool {
+        switch self {
+        case .plaidCloud: return true
         default: return false
         }
     }
@@ -371,6 +405,7 @@ enum STTProvider: String, CaseIterable {
         case .soniox: return "Soniox transcription"
         case .glmASR: return "智谱 ASR"
         case .customAPI: return "OpenAI-compatible endpoint"
+        case .plaidCloud: return "Lightweight, accurate, ready to go"
         }
     }
     
@@ -392,6 +427,7 @@ enum STTProvider: String, CaseIterable {
         case .soniox: return "Soniox async transcription"
         case .glmASR: return "Zhipu GLM-ASR-2512 (CER 0.0717)"
         case .customAPI: return "Custom OpenAI-compatible endpoint"
+        case .plaidCloud: return "Plaid Cloud — fast, accurate, no local models needed"
         }
     }
 }

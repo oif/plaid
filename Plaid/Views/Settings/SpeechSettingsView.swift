@@ -12,6 +12,7 @@ struct SpeechSettingsView: View {
     @Binding var elevenLabsApiKey: String
     @Binding var sonioxApiKey: String
     @Binding var glmApiKey: String
+    @Binding var plaidCloudApiKey: String
     
     // Local state
     @State private var showModelError: String?
@@ -20,15 +21,23 @@ struct SpeechSettingsView: View {
         ScrollView {
             VStack(spacing: 24) {
                 processingModeSection
-                sttSection
-                audioProcessingSection
-                llmSection
+                if isCloudMode {
+                    plaidCloudSection
+                } else {
+                    sttSection
+                    audioProcessingSection
+                    llmSection
+                }
             }
             .padding()
         }
     }
     
     // MARK: - Processing Mode Section
+    
+    private var isCloudMode: Bool {
+        settings.sttProvider == .plaidCloud
+    }
     
     private var processingModeSection: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -38,21 +47,74 @@ struct SpeechSettingsView: View {
                 .tracking(0.5)
             
             HStack(spacing: 12) {
-                ProcessingModeCard(
-                    icon: "laptopcomputer",
-                    title: "Local",
-                    description: "Process on device with your API keys",
-                    isSelected: true
-                )
+                Button {
+                    if isCloudMode {
+                        settings.sttProvider = .appleSpeech
+                    }
+                } label: {
+                    ProcessingModeCard(
+                        icon: "laptopcomputer",
+                        title: "Local",
+                        description: "Process on device with your API keys",
+                        isSelected: !isCloudMode
+                    )
+                }
+                .buttonStyle(.plain)
                 
-                ProcessingModeCard(
-                    icon: "cloud",
-                    title: "Cloud",
-                    description: "Coming Soon",
-                    isSelected: false,
-                    isDisabled: true
-                )
+                Button {
+                    settings.sttProvider = .plaidCloud
+                } label: {
+                    ProcessingModeCard(
+                        icon: "cloud",
+                        title: "Cloud",
+                        description: "Lightweight, accurate, ready to go",
+                        isSelected: isCloudMode
+                    )
+                }
+                .buttonStyle(.plain)
             }
+        }
+    }
+    
+    // MARK: - Plaid Cloud Section
+    
+    private var plaidCloudSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("PLAID CLOUD")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .tracking(0.5)
+            
+            VStack(spacing: 0) {
+                VStack(spacing: 12) {
+                    SecureField("Auth Key", text: $plaidCloudApiKey)
+                        .textFieldStyle(.roundedBorder)
+                        .onChange(of: plaidCloudApiKey) { _, newValue in
+                            settings.plaidCloudApiKey = newValue
+                        }
+                    
+                    TextField("Endpoint", text: $settings.plaidCloudEndpoint)
+                        .textFieldStyle(.roundedBorder)
+                }
+                .padding()
+                
+                Divider()
+                    .padding(.horizontal)
+                
+                HStack {
+                    Image(systemName: "info.circle")
+                        .foregroundStyle(.secondary)
+                    Text("No local models or API keys needed. Speech recognition and text correction are handled in the cloud.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
+                .padding()
+            }
+            .background(.secondary.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(.secondary.opacity(0.1), lineWidth: 1)
+            )
         }
     }
     
@@ -66,7 +128,7 @@ struct SpeechSettingsView: View {
                 .tracking(0.5)
             
             VStack(spacing: 8) {
-                ForEach(STTProvider.allCases, id: \.self) { provider in
+                ForEach(STTProvider.allCases.filter { $0 != .plaidCloud }, id: \.self) { provider in
                     STTProviderCard(
                         provider: provider,
                         isSelected: settings.sttProvider == provider,
@@ -94,6 +156,8 @@ struct SpeechSettingsView: View {
             return $glmApiKey
         case .customAPI:
             return $customSTTApiKey
+        case .plaidCloud:
+            return $plaidCloudApiKey
         default:
             return .constant("")
         }
@@ -390,6 +454,20 @@ struct STTProviderCard: View {
                 Text("Uses built-in macOS speech recognition")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
+                
+            case .plaidCloud:
+                SecureField("Auth Key", text: $apiKey)
+                    .textFieldStyle(.roundedBorder)
+                    .onChange(of: apiKey) { _, newValue in
+                        settings.plaidCloudApiKey = newValue
+                    }
+                
+                TextField("Endpoint", text: $settings.plaidCloudEndpoint)
+                    .textFieldStyle(.roundedBorder)
+                
+                Text("STT + LLM correction handled server-side. No additional API keys needed.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
             }
         }
         .padding()
@@ -491,7 +569,8 @@ struct STTProviderCard: View {
         customLLMApiKey: .constant(""),
         elevenLabsApiKey: .constant(""),
         sonioxApiKey: .constant(""),
-        glmApiKey: .constant("")
+        glmApiKey: .constant(""),
+        plaidCloudApiKey: .constant("")
     )
     .environmentObject(AppState())
     .environmentObject(AppSettings.shared)

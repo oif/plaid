@@ -3,6 +3,20 @@ import Speech
 import AVFoundation
 import Accelerate
 
+// MARK: - STT Result
+
+struct STTResult {
+    let text: String
+    let original: String?
+    let durationMs: Int?
+    
+    static func plain(_ text: String) -> STTResult {
+        STTResult(text: text, original: nil, durationMs: nil)
+    }
+    
+    var isCloudCorrected: Bool { original != nil }
+}
+
 // MARK: - Multipart Form Builder
 
 private struct MultipartFormBuilder {
@@ -87,7 +101,7 @@ class STTService: ObservableObject {
             try await startAppleSpeechRecording(onPartial: onPartial)
         case .sherpaLocal:
             try await startSherpaRecording()
-        case .whisperAPI, .elevenLabs, .soniox, .glmASR, .customAPI:
+        case .whisperAPI, .elevenLabs, .soniox, .glmASR, .customAPI, .plaidCloud:
             try await startAPIRecording()
         }
         
@@ -254,7 +268,7 @@ class STTService: ObservableObject {
         return text
     }
     
-    func stopListening() async throws -> String {
+    func stopListening(context: AppContext? = nil) async throws -> STTResult {
         let settings = AppSettings.shared
         
         audioEngine?.stop()
@@ -274,7 +288,7 @@ class STTService: ObservableObject {
                     audioEngine = nil
                     recognitionRequest = nil
                     recognitionTask = nil
-                    return ""
+                    return .plain("")
                 }
             }
             
@@ -286,22 +300,24 @@ class STTService: ObservableObject {
             }
         }
         
-        let result: String
+        let result: STTResult
         
         switch settings.sttProvider {
         case .appleSpeech:
             try? await Task.sleep(nanoseconds: 300_000_000)
-            result = currentTranscription
+            result = .plain(currentTranscription)
         case .sherpaLocal:
-            result = try await transcribeWithSherpa()
+            result = .plain(try await transcribeWithSherpa())
         case .whisperAPI, .customAPI:
-            result = try await transcribeWithAPI()
+            result = .plain(try await transcribeWithAPI())
         case .elevenLabs:
-            result = try await transcribeWithElevenLabs()
+            result = .plain(try await transcribeWithElevenLabs())
         case .soniox:
-            result = try await transcribeWithSoniox()
+            result = .plain(try await transcribeWithSoniox())
         case .glmASR:
-            result = try await transcribeWithGLM()
+            result = .plain(try await transcribeWithGLM())
+        case .plaidCloud:
+            result = try await transcribeWithPlaidCloud(context: context)
         }
         
         audioEngine = nil
@@ -400,6 +416,84 @@ class STTService: ObservableObject {
         
         struct TextResponse: Decodable { let text: String }
         return try JSONDecoder().decode(TextResponse.self, from: data).text
+    }
+    
+    private func transcribeWithPlaidCloud(context: AppContext? = nil) async throws -> STTResult {
+        let (audioData, settings) = try prepareTranscription()
+        
+        let endpoint = settings.effectiveSTTEndpoint
+        let apiKey = settings.plaidCloudApiKey
+        
+        guard !endpoint.isEmpty, !apiKey.isEmpty, let url = URL(string: endpoint) else {
+            throw STTError.configError
+        }
+        
+        var form = MultipartFormBuilder()
+        form.addFile(name: "audio", filename: "audio.wav", contentType: "audio/wav", fileData: audioData)
+        if settings.language != "auto" {
+            form.addField(name: "language", value: settings.language)
+        }
+        if let appName = context?.appName {
+            form.addField(name: "context_app", value: appName)
+        }
+        if let element = context?.focusedElement {
+            form.addField(name: "context_element", value: element)
+        }
+        let builtIn = ["Plaid"]
+        let vocab = builtIn + settings.customVocabulary.filter { !builtIn.contains($0) }
+        if !vocab.isEmpty {
+            form.addField(name: "vocabulary", value: vocab.joined(separator: ","))
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue(form.contentType, forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 60
+        request.httpBody = form.build()
+        
+        let (data, response) = try await NetworkSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw STTError.apiError
+        }
+        
+        guard httpResponse.statusCode == 200 else {
+            if let errorData = try? JSONDecoder().decode(PlaidCloudErrorResponse.self, from: data) {
+                throw STTError.serverError("[\(errorData.error.code)] \(errorData.error.message)")
+            }
+            if let raw = String(data: data, encoding: .utf8) {
+                throw STTError.serverError(raw)
+            }
+            throw STTError.httpError(httpResponse.statusCode)
+        }
+        
+        let decoded = try JSONDecoder().decode(PlaidCloudResponse.self, from: data)
+        return STTResult(
+            text: decoded.text,
+            original: decoded.original,
+            durationMs: decoded.durationMs
+        )
+    }
+    
+    private struct PlaidCloudResponse: Decodable {
+        let text: String
+        let original: String?
+        let durationMs: Int?
+        
+        enum CodingKeys: String, CodingKey {
+            case text, original
+            case durationMs = "duration_ms"
+        }
+    }
+    
+    private struct PlaidCloudErrorResponse: Decodable {
+        let error: ErrorDetail
+        
+        struct ErrorDetail: Decodable {
+            let code: String
+            let message: String
+        }
     }
     
     private func transcribeWithSoniox() async throws -> String {
@@ -527,7 +621,7 @@ class STTService: ObservableObject {
         cleanup()
     }
     
-    func transcribeFile(at url: URL) async throws -> String {
+    func transcribeFile(at url: URL, context: AppContext? = nil) async throws -> STTResult {
         let settings = AppSettings.shared
         
         let tempDir = FileManager.default.temporaryDirectory
@@ -535,21 +629,21 @@ class STTService: ObservableObject {
         try FileManager.default.copyItem(at: url, to: tempCopy)
         tempFileURL = tempCopy
         
-
-        
         switch settings.sttProvider {
         case .appleSpeech:
             throw STTError.configError
         case .sherpaLocal:
-            return try await transcribeWithSherpa()
+            return .plain(try await transcribeWithSherpa())
         case .whisperAPI, .customAPI:
-            return try await transcribeWithAPI()
+            return .plain(try await transcribeWithAPI())
         case .elevenLabs:
-            return try await transcribeWithElevenLabs()
+            return .plain(try await transcribeWithElevenLabs())
         case .soniox:
-            return try await transcribeWithSoniox()
+            return .plain(try await transcribeWithSoniox())
         case .glmASR:
-            return try await transcribeWithGLM()
+            return .plain(try await transcribeWithGLM())
+        case .plaidCloud:
+            return try await transcribeWithPlaidCloud(context: context)
         }
     }
     

@@ -181,6 +181,10 @@ struct RecordDetailView: View {
     
     // MARK: - Performance Section
     
+    private var isCloudProvider: Bool {
+        sttProviderEnum == .plaidCloud
+    }
+    
     private var performanceSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("PERFORMANCE")
@@ -189,48 +193,58 @@ struct RecordDetailView: View {
                 .tracking(0.5)
             
             VStack(spacing: 0) {
-                performanceRow(
-                    icon: providerIcon,
-                    label: "Speech Recognition",
-                    value: providerDisplayName,
-                    timing: String(format: "%.2fs", record.sttDuration),
-                    color: .orange
-                )
-                
-                if let llm = record.llmDuration {
+                if isCloudProvider {
+                    performanceRow(
+                        icon: "bolt.fill",
+                        label: "Plaid Cloud",
+                        value: "STT + LLM",
+                        timing: record.formattedDuration,
+                        color: .blue
+                    )
+                } else {
+                    performanceRow(
+                        icon: providerIcon,
+                        label: "Speech Recognition",
+                        value: providerDisplayName,
+                        timing: String(format: "%.2fs", record.sttDuration),
+                        color: .orange
+                    )
+                    
+                    if let llm = record.llmDuration {
+                        Divider()
+                            .padding(.leading, 36)
+                        
+                        performanceRow(
+                            icon: "sparkles",
+                            label: "LLM Enhancement",
+                            value: "Enabled",
+                            timing: String(format: "%.2fs", llm),
+                            color: .purple
+                        )
+                    }
+                    
                     Divider()
                         .padding(.leading, 36)
                     
-                    performanceRow(
-                        icon: "sparkles",
-                        label: "LLM Enhancement",
-                        value: "Enabled",
-                        timing: String(format: "%.2fs", llm),
-                        color: .purple
-                    )
+                    HStack {
+                        Image(systemName: "timer")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 24)
+                        
+                        Text("Total Processing")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                        
+                        Spacer()
+                        
+                        Text(record.formattedDuration)
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .monospacedDigit()
+                    }
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 12)
                 }
-                
-                Divider()
-                    .padding(.leading, 36)
-                
-                HStack {
-                    Image(systemName: "timer")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 24)
-                    
-                    Text("Total Processing")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                    
-                    Spacer()
-                    
-                    Text(record.formattedDuration)
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                        .monospacedDigit()
-                }
-                .padding(.vertical, 10)
-                .padding(.horizontal, 12)
             }
             .background(.secondary.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
         }

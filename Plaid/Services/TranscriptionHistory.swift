@@ -400,39 +400,51 @@ class TranscriptionHistoryService: ObservableObject {
         let avgSTTLatency: Double
         let avgLLMLatency: Double?
         let avgTotalLatency: Double
+        let avgCloudLatency: Double?
         let realtimeFactor: Double?
         let llmCorrectionRate: Double
         let totalSessions: Int
     }
+    
+    private static let cloudProviderValue = "plaid_cloud"
     
     var performanceStats: PerformanceStats {
         let records = recentRecords
         guard !records.isEmpty else {
             return PerformanceStats(
                 avgSTTLatency: 0, avgLLMLatency: nil, avgTotalLatency: 0,
-                realtimeFactor: nil, llmCorrectionRate: 0, totalSessions: 0
+                avgCloudLatency: nil, realtimeFactor: nil, llmCorrectionRate: 0, totalSessions: 0
             )
         }
         
-        let avgSTT = records.reduce(0.0) { $0 + $1.sttDuration } / Double(records.count)
+        let localRecords = records.filter { $0.sttProvider != Self.cloudProviderValue }
+        let cloudRecords = records.filter { $0.sttProvider == Self.cloudProviderValue }
         
-        let llmRecords = records.compactMap { $0.llmDuration }
+        let avgSTT = localRecords.isEmpty ? 0 :
+            localRecords.reduce(0.0) { $0 + $1.sttDuration } / Double(localRecords.count)
+        
+        let llmRecords = localRecords.compactMap { $0.llmDuration }
         let avgLLM: Double? = llmRecords.isEmpty ? nil : llmRecords.reduce(0.0, +) / Double(llmRecords.count)
+        
+        let avgCloud: Double? = cloudRecords.isEmpty ? nil :
+            cloudRecords.reduce(0.0) { $0 + $1.sttDuration } / Double(cloudRecords.count)
         
         let avgTotal = records.reduce(0.0) { $0 + $1.sttDuration + ($1.llmDuration ?? 0) } / Double(records.count)
         
-        let rtfRecords = records.compactMap { r -> Double? in
+        let rtfRecords = localRecords.compactMap { r -> Double? in
             guard let rec = r.recordingDuration, rec > 0.1 else { return nil }
             return rec / r.sttDuration
         }
         let rtf: Double? = rtfRecords.isEmpty ? nil : rtfRecords.reduce(0.0, +) / Double(rtfRecords.count)
         
-        let correctionRate = Double(llmRecords.count) / Double(records.count)
+        let enhancedCount = llmRecords.count + cloudRecords.filter { $0.correctedText != nil }.count
+        let correctionRate = Double(enhancedCount) / Double(records.count)
         
         return PerformanceStats(
             avgSTTLatency: avgSTT,
             avgLLMLatency: avgLLM,
             avgTotalLatency: avgTotal,
+            avgCloudLatency: avgCloud,
             realtimeFactor: rtf,
             llmCorrectionRate: correctionRate,
             totalSessions: records.count

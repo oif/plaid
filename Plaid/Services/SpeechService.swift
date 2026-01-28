@@ -11,7 +11,7 @@ struct TranscriptionResult {
     let appContext: AppContext?
     
     var finalText: String { processedText }
-    var wasEnhanced: Bool { llmDuration != nil }
+    var wasEnhanced: Bool { llmDuration != nil || originalText != processedText }
 }
 
 @MainActor
@@ -95,45 +95,18 @@ class SpeechService: ObservableObject {
         let appContext = contextService.getCurrentContext()
         
         let sttStart = Date()
-        let originalText = try await sttService.stopListening()
-        let sttDuration = Date().timeIntervalSince(sttStart)
+        let sttResult = try await sttService.stopListening(context: appContext)
+        let wallDuration = Date().timeIntervalSince(sttStart)
         
-        let hasContent = Self.hasSubstantiveContent(originalText)
-        
-        guard hasContent else {
-            return TranscriptionResult(
-                originalText: originalText,
-                processedText: "",
-                sttDuration: sttDuration,
-                llmDuration: nil,
-                recordingDuration: recDuration,
-                sttProvider: settings.sttProvider.rawValue,
-                appContext: appContext
-            )
-        }
-        
-        var processedText = originalText
-        var llmDuration: Double? = nil
-        
-        if settings.enableLLMCorrection && !settings.effectiveLLMApiKey.isEmpty {
-            let llmStart = Date()
-            let messages = Self.buildMessages(text: originalText, settings: settings, context: appContext)
-            processedText = try await llmService.process(messages: messages)
-            llmDuration = Date().timeIntervalSince(llmStart)
-        }
-        
-        let result = TranscriptionResult(
-            originalText: originalText,
-            processedText: processedText,
-            sttDuration: sttDuration,
-            llmDuration: llmDuration,
+        let result = try await buildTranscriptionResult(
+            sttResult: sttResult,
+            wallDuration: wallDuration,
             recordingDuration: recDuration,
-            sttProvider: settings.sttProvider.rawValue,
+            settings: settings,
             appContext: appContext
         )
         
         saveToHistory(result)
-        
         return result
     }
     
@@ -149,18 +122,62 @@ class SpeechService: ObservableObject {
         let appContext = contextService.getCurrentContext()
         
         let sttStart = Date()
-        let originalText = try await sttService.transcribeFile(at: url)
-        let sttDuration = Date().timeIntervalSince(sttStart)
+        let sttResult = try await sttService.transcribeFile(at: url, context: appContext)
+        let wallDuration = Date().timeIntervalSince(sttStart)
         
-        let hasContent = Self.hasSubstantiveContent(originalText)
+        let result = try await buildTranscriptionResult(
+            sttResult: sttResult,
+            wallDuration: wallDuration,
+            recordingDuration: nil,
+            settings: settings,
+            appContext: appContext
+        )
         
-        guard hasContent else {
+        saveToHistory(result)
+        return result
+    }
+    
+    func cancel() {
+        if isListening {
+            sttService.cancel()
+        }
+        isListening = false
+        isProcessing = false
+        waveformLevels = Array(repeating: 0.1, count: 12)
+    }
+    
+    private func buildTranscriptionResult(
+        sttResult: STTResult,
+        wallDuration: Double,
+        recordingDuration: Double?,
+        settings: AppSettings,
+        appContext: AppContext
+    ) async throws -> TranscriptionResult {
+        if sttResult.isCloudCorrected {
+            let originalText = sttResult.original ?? sttResult.text
+            let sttDuration = sttResult.durationMs.map { Double($0) / 1000.0 } ?? wallDuration
+            
+            return TranscriptionResult(
+                originalText: originalText,
+                processedText: sttResult.text,
+                sttDuration: sttDuration,
+                llmDuration: nil,
+                recordingDuration: recordingDuration,
+                sttProvider: settings.sttProvider.rawValue,
+                appContext: appContext
+            )
+        }
+        
+        let originalText = sttResult.text
+        let sttDuration = wallDuration
+        
+        guard Self.hasSubstantiveContent(originalText) else {
             return TranscriptionResult(
                 originalText: originalText,
                 processedText: "",
                 sttDuration: sttDuration,
                 llmDuration: nil,
-                recordingDuration: nil,
+                recordingDuration: recordingDuration,
                 sttProvider: settings.sttProvider.rawValue,
                 appContext: appContext
             )
@@ -176,28 +193,15 @@ class SpeechService: ObservableObject {
             llmDuration = Date().timeIntervalSince(llmStart)
         }
         
-        let result = TranscriptionResult(
+        return TranscriptionResult(
             originalText: originalText,
             processedText: processedText,
             sttDuration: sttDuration,
             llmDuration: llmDuration,
-            recordingDuration: nil,
+            recordingDuration: recordingDuration,
             sttProvider: settings.sttProvider.rawValue,
             appContext: appContext
         )
-        
-        saveToHistory(result)
-        
-        return result
-    }
-    
-    func cancel() {
-        if isListening {
-            sttService.cancel()
-        }
-        isListening = false
-        isProcessing = false
-        waveformLevels = Array(repeating: 0.1, count: 12)
     }
     
     private static func hasSubstantiveContent(_ text: String) -> Bool {
