@@ -3,48 +3,55 @@ import SwiftUI
 struct TranscriptionPillView: View {
     @ObservedObject var pillState: TranscriptionPillState
     
+    @State private var cancelHovered = false
+    
     var body: some View {
-        pillContent
-            .frame(width: 130, height: 40)
-            .background {
-                Capsule()
-                    .fill(Color.black.opacity(0.85))
+        HStack(spacing: 0) {
+            if let error = pillState.errorMessage {
+                errorContent(error)
+            } else if pillState.isProcessing {
+                processingContent
+            } else {
+                recordingContent
             }
-            .overlay {
-                Capsule()
-                    .strokeBorder(.white.opacity(0.15), lineWidth: 0.5)
-            }
-            .shadow(color: .black.opacity(0.4), radius: 12, y: 4)
-            .animation(.easeInOut(duration: 0.2), value: pillState.isProcessing)
-            .animation(.easeInOut(duration: 0.2), value: pillState.errorMessage)
+        }
+        .frame(height: 36)
+        .background {
+            Capsule()
+                .fill(.ultraThinMaterial)
+                .shadow(color: .black.opacity(0.15), radius: 8, y: 2)
+                .shadow(color: .black.opacity(0.1), radius: 1, y: 1)
+        }
+        .overlay {
+            Capsule()
+                .strokeBorder(.white.opacity(0.2), lineWidth: 0.5)
+        }
     }
     
-    @ViewBuilder
-    private var pillContent: some View {
-        if let error = pillState.errorMessage {
-            HStack(spacing: 8) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.orange)
-                
-                Text(error)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.9))
-            }
-        } else if pillState.isProcessing {
-            HStack(spacing: 8) {
-                ProgressView()
-                    .progressViewStyle(.circular)
-                    .controlSize(.small)
-                    .tint(.white)
-                
-                Text("Processing")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.8))
-            }
-        } else {
-            recordingContent
+    private func errorContent(_ error: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.circle.fill")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.orange)
+            
+            Text(error)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.primary)
         }
+        .padding(.horizontal, 14)
+    }
+    
+    private var processingContent: some View {
+        HStack(spacing: 8) {
+            ProgressView()
+                .scaleEffect(0.7)
+                .tint(.secondary)
+            
+            Text("Thinking...")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.primary)
+        }
+        .padding(.horizontal, 14)
     }
     
     private var recordingContent: some View {
@@ -54,72 +61,54 @@ struct TranscriptionPillView: View {
                 .frame(width: 8, height: 8)
                 .padding(.leading, 14)
             
-            Spacer()
-            
-            waveformIndicator
-            
-            Spacer()
+            waveformView
+                .frame(width: 60)
+                .padding(.horizontal, 12)
             
             Button {
                 pillState.cancel()
             } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.6))
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.secondary)
                     .frame(width: 24, height: 24)
+                    .background {
+                        Circle()
+                            .fill(.quaternary.opacity(cancelHovered ? 1 : 0.5))
+                    }
             }
             .buttonStyle(.plain)
-            .background(Circle().fill(.white.opacity(0.15)))
-            .padding(.trailing, 8)
+            .onHover { cancelHovered = $0 }
+            .padding(.trailing, 6)
         }
     }
     
-    private var waveformIndicator: some View {
-        HStack(spacing: 3) {
+    private var waveformView: some View {
+        HStack(spacing: 2) {
             ForEach(0..<12, id: \.self) { index in
-                WaveformBar(
-                    height: barHeight(for: index),
-                    isRecording: pillState.isRecording
-                )
+                RoundedRectangle(cornerRadius: 1)
+                    .fill(.primary.opacity(0.6))
+                    .frame(width: 2, height: barHeight(for: index))
             }
         }
-        .frame(width: 56, height: 26)
         .animation(.easeOut(duration: 0.08), value: pillState.waveformLevels)
     }
     
     private func barHeight(for index: Int) -> CGFloat {
-        let level = pillState.waveformLevels[safe: index] ?? 0.1
+        guard index < pillState.waveformLevels.count else { return 4 }
+        let level = pillState.waveformLevels[index]
         let centerIndex: CGFloat = 5.5
         let distance = abs(CGFloat(index) - centerIndex)
-        let falloff = 1.0 - (distance / centerIndex) * 0.25
+        let falloff = 1.0 - (distance / centerIndex) * 0.3
         let effectiveLevel = pillState.isRecording ? CGFloat(level) : 0.15
-        let minHeight: CGFloat = 4
-        let maxHeight: CGFloat = 24
-        return minHeight + effectiveLevel * falloff * (maxHeight - minHeight)
-    }
-}
-
-private struct WaveformBar: View {
-    let height: CGFloat
-    let isRecording: Bool
-    
-    var body: some View {
-        RoundedRectangle(cornerRadius: 1.5)
-            .fill(.white.opacity(isRecording ? 1.0 : 0.6))
-            .frame(width: 3, height: height)
-    }
-}
-
-extension Array {
-    subscript(safe index: Int) -> Element? {
-        indices.contains(index) ? self[index] : nil
+        return 4 + effectiveLevel * falloff * 14
     }
 }
 
 #Preview {
     ZStack {
-        Color.gray.opacity(0.5)
+        Color.gray.opacity(0.3)
         TranscriptionPillView(pillState: TranscriptionPillState())
     }
-    .frame(width: 300, height: 200)
+    .frame(width: 300, height: 100)
 }

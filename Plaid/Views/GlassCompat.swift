@@ -55,6 +55,50 @@ extension View {
     }
 }
 
+// MARK: - Glass Card Modifier
+
+extension View {
+    @ViewBuilder
+    func glassCard() -> some View {
+        if #available(macOS 26.0, *) {
+            self.glassEffect(.regular, in: .rect(cornerRadius: 14))
+        } else {
+            self
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .strokeBorder(.secondary.opacity(0.1), lineWidth: 1)
+                )
+        }
+    }
+    
+    @ViewBuilder
+    func glassPill() -> some View {
+        if #available(macOS 26.0, *) {
+            self.glassEffect(.regular, in: Capsule())
+        } else {
+            self.background(.regularMaterial, in: Capsule())
+        }
+    }
+    
+    @ViewBuilder
+    func glassInteractive(isHovered: Bool = false) -> some View {
+        if #available(macOS 26.0, *) {
+            self
+                .glassEffect(
+                    isHovered ? .regular.tint(.primary.opacity(0.1)).interactive() : .regular.interactive(),
+                    in: .rect(cornerRadius: 12)
+                )
+        } else {
+            self
+                .background(
+                    isHovered ? Color.primary.opacity(0.08) : Color.secondary.opacity(0.06),
+                    in: RoundedRectangle(cornerRadius: 12)
+                )
+        }
+    }
+}
+
 // MARK: - Button Styles
 
 struct GlassButtonStyle: ButtonStyle {

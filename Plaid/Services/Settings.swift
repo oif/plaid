@@ -5,11 +5,29 @@ extension Notification.Name {
     static let hotkeyDidChange = Notification.Name("hotkeyDidChange")
 }
 
+@MainActor
 class AppSettings: ObservableObject {
     static let shared = AppSettings()
     
     static let defaultPrompt = """
-Fix transcription errors, grammar, and punctuation. Keep the original meaning, tone, and language.
+你是一个语音转文字后处理助手。请修正以下转录文本：
+
+**修正范围：**
+- 同音字/谐音错误（如「以经」→「已经」）
+- 缺失或错误的标点符号
+- 语句不通顺或语法问题
+- 技术术语、品牌名、产品名、公司名：识别后按官方拼写和大小写修正（如 cloudflare→Cloudflare, github→GitHub, iphone→iPhone）
+
+**移除内容：**
+- 口语填充词：嗯、啊、那个、就是说、然后然后...
+- 无意义重复
+- 不完整的句子碎片
+
+**保持不变：**
+- 原有语义和表达风格
+- 说话人的语气和意图
+
+直接输出修正后的文本，无需解释。
 
 {{text}}
 """
@@ -94,6 +112,10 @@ Fix transcription errors, grammar, and punctuation. Keep the original meaning, t
         didSet { defaults.set(autoInject, forKey: "autoInject") }
     }
     
+    @Published var enableDenoising: Bool {
+        didSet { defaults.set(enableDenoising, forKey: "enableDenoising") }
+    }
+    
     @Published var customVocabulary: [String] {
         didSet { defaults.set(customVocabulary, forKey: "customVocabulary") }
     }
@@ -141,6 +163,7 @@ Fix transcription errors, grammar, and punctuation. Keep the original meaning, t
         
         // General
         self.autoInject = defaults.object(forKey: "autoInject") as? Bool ?? true
+        self.enableDenoising = defaults.object(forKey: "enableDenoising") as? Bool ?? true
         self.customVocabulary = defaults.stringArray(forKey: "customVocabulary") ?? []
         
         let spaceKeyCode = 49
@@ -311,27 +334,15 @@ enum LLMProvider: String, CaseIterable {
 // MARK: - Network Session (with System Proxy)
 
 enum NetworkSession {
-    private static var _shared: URLSession?
-    
-    static var shared: URLSession {
-        if let session = _shared {
-            return session
-        }
-        
+    private static let _shared: URLSession = {
         let config = URLSessionConfiguration.default
         config.connectionProxyDictionary = CFNetworkCopySystemProxySettings()?.takeRetainedValue() as? [String: Any]
         config.timeoutIntervalForRequest = 60
         config.timeoutIntervalForResource = 120
-        
-        let session = URLSession(configuration: config)
-        _shared = session
-        return session
-    }
+        return URLSession(configuration: config)
+    }()
     
-    static func reset() {
-        _shared?.invalidateAndCancel()
-        _shared = nil
-    }
+    static var shared: URLSession { _shared }
 }
 
 // MARK: - Keychain Helper

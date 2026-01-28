@@ -233,7 +233,8 @@ class STTService: ObservableObject {
         }
         
         if !SherpaOnnxService.shared.isReady {
-            try SherpaOnnxService.shared.initialize(with: selectedModel)
+            let language = await AppSettings.shared.language
+            try SherpaOnnxService.shared.initialize(with: selectedModel, language: language)
         }
         try await startAPIRecording()
     }
@@ -276,7 +277,7 @@ class STTService: ObservableObject {
                 }
             }
             
-            if SpeechDenoiserService.shared.isModelAvailable {
+            if settings.enableDenoising && SpeechDenoiserService.shared.isModelAvailable {
                 if let denoisedURL = try? SpeechDenoiserService.shared.denoise(fileURL: fileURL) {
                     try? FileManager.default.removeItem(at: fileURL)
                     tempFileURL = denoisedURL

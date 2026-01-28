@@ -39,8 +39,9 @@ class AppContextService: ObservableObject {
             let systemWide = AXUIElementCreateSystemWide()
             var focusedRef: CFTypeRef?
             
-            if AXUIElementCopyAttributeValue(systemWide, kAXFocusedUIElementAttribute as CFString, &focusedRef) == .success {
-                let element = focusedRef as! AXUIElement
+            if AXUIElementCopyAttributeValue(systemWide, kAXFocusedUIElementAttribute as CFString, &focusedRef) == .success,
+               let ref = focusedRef {
+                let element = ref as! AXUIElement
                 var roleRef: CFTypeRef?
                 if AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleRef) == .success {
                     focusedRole = roleRef as? String
@@ -55,6 +56,7 @@ class AppContextService: ObservableObject {
         )
     }
     
+    @MainActor
     func getVoiceContext() -> VoiceContext {
         let app = NSWorkspace.shared.frontmostApplication
         let settings = AppSettings.shared
@@ -82,11 +84,11 @@ class AppContextService: ObservableObject {
             return nil
         }
         
-        let element = focusedRef as! AXUIElement
+        guard let element = focusedRef else { return nil }
         var selectedTextRef: CFTypeRef?
         
         guard AXUIElementCopyAttributeValue(
-            element,
+            element as! AXUIElement,
             kAXSelectedTextAttribute as CFString,
             &selectedTextRef
         ) == .success else {
