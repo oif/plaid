@@ -49,7 +49,7 @@ class LLMService {
             "model": model,
             "messages": messagesPayload,
             "temperature": 0.1,
-            "max_tokens": 512
+            "max_tokens": 4096
         ]
         
         if useStreaming {

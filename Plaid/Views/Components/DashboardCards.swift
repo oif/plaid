@@ -45,6 +45,8 @@ struct HeroTimeSavedCard: View {
                     .foregroundStyle(.white.opacity(0.6))
             }
             
+            Spacer(minLength: 0)
+            
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(heroValue)
                     .font(.system(size: 64, weight: .bold, design: .rounded))
@@ -82,6 +84,7 @@ struct HeroTimeSavedCard: View {
             }
         }
         .padding(PlaidSpacing.xl)
+        .frame(maxHeight: .infinity, alignment: .top)
         .background {
             ZStack {
                 LinearGradient(
@@ -235,6 +238,7 @@ struct SpeedComparisonCard: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(PlaidSpacing.lg)
+        .frame(maxHeight: .infinity, alignment: .top)
         .background(.secondary.opacity(PlaidOpacity.subtle), in: RoundedRectangle(cornerRadius: PlaidRadius.lg))
         .overlay(
             RoundedRectangle(cornerRadius: PlaidRadius.lg)
@@ -368,6 +372,7 @@ struct WeeklyActivityChart: View {
             }
         }
         .padding(PlaidSpacing.lg)
+        .frame(maxHeight: .infinity, alignment: .top)
         .background(.secondary.opacity(PlaidOpacity.subtle), in: RoundedRectangle(cornerRadius: PlaidRadius.lg))
         .overlay(
             RoundedRectangle(cornerRadius: PlaidRadius.lg)
@@ -690,6 +695,7 @@ struct AppUsageCard: View {
             }
         }
         .padding(PlaidSpacing.lg)
+        .frame(maxHeight: .infinity, alignment: .top)
         .background(.secondary.opacity(PlaidOpacity.subtle), in: RoundedRectangle(cornerRadius: PlaidRadius.lg))
         .overlay(
             RoundedRectangle(cornerRadius: PlaidRadius.lg)
