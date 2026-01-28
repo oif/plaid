@@ -1,11 +1,13 @@
 import Foundation
 import AVFoundation
+import os
 
 @MainActor
 class AudioPipeline: ObservableObject {
     
     struct Config {
         var targetSampleRate: Int = 16000
+        var maxRecordingDuration: TimeInterval = 300
     }
     
     @Published private(set) var audioLevel: Float = 0
@@ -17,11 +19,33 @@ class AudioPipeline: ObservableObject {
     private var vadProcessor: VADProcessor
     private var config: Config
     
-    private var accumulatedSamples: [Float] = []
+    private nonisolated(unsafe) var sampleLock = OSAllocatedUnfairLock()
+    private nonisolated(unsafe) var _accumulatedSamples: [Float] = []
+    
+    private func appendSamples(_ samples: [Float]) {
+        sampleLock.withLock { _accumulatedSamples.append(contentsOf: samples) }
+    }
+    
+    private func getSamplesAndClear() -> [Float] {
+        sampleLock.withLock {
+            let result = _accumulatedSamples
+            _accumulatedSamples = []
+            return result
+        }
+    }
+    
+    private func clearSamples() {
+        sampleLock.withLock { _accumulatedSamples = [] }
+    }
+    
     private var recordingStartTime: Date?
     private var tempFileURL: URL?
     private var audioFile: AVAudioFile?
     private var sampleCollectionCounter: Int = 0
+    
+    private static let waveformCapacity = 200
+    private var waveformWriteIndex = 0
+    private var waveformBuffer: [Float] = Array(repeating: 0, count: waveformCapacity)
     
     init(config: Config = Config()) {
         self.config = config
@@ -41,8 +65,9 @@ class AudioPipeline: ObservableObject {
         }
         
         recordingStartTime = Date()
-        accumulatedSamples = []
+        clearSamples()
         waveformSamples = []
+        waveformWriteIndex = 0
         sampleCollectionCounter = 0
         
         let tempDir = FileManager.default.temporaryDirectory
@@ -92,9 +117,16 @@ class AudioPipeline: ObservableObject {
                 self.sampleCollectionCounter += 1
                 if self.sampleCollectionCounter % 3 == 0 {
                     let normalizedSample = min(1.0, vadResult.peakLevel * 3)
-                    self.waveformSamples.append(normalizedSample)
-                    if self.waveformSamples.count > 200 {
-                        self.waveformSamples.removeFirst()
+                    self.waveformBuffer[self.waveformWriteIndex] = normalizedSample
+                    self.waveformWriteIndex = (self.waveformWriteIndex + 1) % Self.waveformCapacity
+                    
+                    let filled = min(self.sampleCollectionCounter / 3, Self.waveformCapacity)
+                    if filled >= Self.waveformCapacity {
+                        let start = Array(self.waveformBuffer[self.waveformWriteIndex...])
+                        let end = Array(self.waveformBuffer[..<self.waveformWriteIndex])
+                        self.waveformSamples = start + end
+                    } else {
+                        self.waveformSamples = Array(self.waveformBuffer[..<filled])
                     }
                     self.delegate?.audioPipeline(self, didUpdateWaveform: self.waveformSamples)
                 }
@@ -115,7 +147,7 @@ class AudioPipeline: ObservableObject {
             
             if let channelData = convertedBuffer.floatChannelData?[0] {
                 let samples = Array(UnsafeBufferPointer(start: channelData, count: Int(convertedBuffer.frameLength)))
-                self.accumulatedSamples.append(contentsOf: samples)
+                self.appendSamples(samples)
             }
         }
         
@@ -134,9 +166,10 @@ class AudioPipeline: ObservableObject {
         
         vadProcessor.reset()
         
+        let samples = getSamplesAndClear()
         let duration = recordingStartTime.map { captureEnd.timeIntervalSince($0) } ?? 0
-        let avgLevel = accumulatedSamples.isEmpty ? 0 : accumulatedSamples.reduce(0) { $0 + abs($1) } / Float(accumulatedSamples.count)
-        let peakLevel = accumulatedSamples.max() ?? 0
+        let avgLevel = samples.isEmpty ? 0 : samples.reduce(0) { $0 + abs($1) } / Float(samples.count)
+        let peakLevel = samples.max() ?? 0
         
         let metrics = AudioMetrics(
             captureMs: captureMs,
@@ -146,7 +179,7 @@ class AudioPipeline: ObservableObject {
         )
         
         let result = ProcessedAudio(
-            samples: accumulatedSamples,
+            samples: samples,
             sampleRate: config.targetSampleRate,
             duration: duration,
             metrics: metrics,
@@ -174,9 +207,10 @@ class AudioPipeline: ObservableObject {
         
         vadProcessor.reset()
         
-        accumulatedSamples = []
+        clearSamples()
         audioLevel = 0
         waveformSamples = []
+        waveformWriteIndex = 0
         sampleCollectionCounter = 0
         recordingStartTime = nil
         

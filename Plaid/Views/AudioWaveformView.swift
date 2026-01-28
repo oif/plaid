@@ -16,15 +16,19 @@ struct AudioWaveformView: View {
     }
     
     var body: some View {
-        HStack(spacing: spacing) {
-            ForEach(0..<barCount, id: \.self) { index in
-                WaveformBar(
-                    level: sampleForBar(index: index),
-                    index: index,
-                    totalBars: barCount,
-                    cornerRadius: cornerRadius
-                )
+        GeometryReader { geometry in
+            HStack(spacing: spacing) {
+                ForEach(0..<barCount, id: \.self) { index in
+                    WaveformBar(
+                        level: sampleForBar(index: index),
+                        index: index,
+                        totalBars: barCount,
+                        cornerRadius: cornerRadius,
+                        parentHeight: geometry.size.height
+                    )
+                }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
     
@@ -43,6 +47,7 @@ private struct WaveformBar: View {
     let index: Int
     let totalBars: Int
     let cornerRadius: CGFloat
+    let parentHeight: CGFloat
     
     private var barHeight: CGFloat {
         let centerIndex = Float(totalBars - 1) / 2.0
@@ -55,13 +60,11 @@ private struct WaveformBar: View {
     }
     
     var body: some View {
-        GeometryReader { geometry in
-            RoundedRectangle(cornerRadius: cornerRadius)
-                .fill(.tint.opacity(0.8))
-                .frame(height: geometry.size.height * barHeight)
-                .frame(maxHeight: .infinity, alignment: .center)
-                .animation(.easeOut(duration: 0.08), value: level)
-        }
+        RoundedRectangle(cornerRadius: cornerRadius)
+            .fill(.tint.opacity(0.8))
+            .frame(height: parentHeight * barHeight)
+            .frame(maxHeight: .infinity, alignment: .center)
+            .animation(.easeOut(duration: 0.08), value: level)
     }
 }
 

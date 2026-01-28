@@ -1,5 +1,6 @@
 import Foundation
 import AVFoundation
+import Accelerate
 
 struct VADResult {
     let level: Float
@@ -33,17 +34,13 @@ class VADProcessor {
             return VADResult(level: 0, peakLevel: 0, isSpeech: false)
         }
         
-        let frameLength = Int(buffer.frameLength)
+        let frameLength = vDSP_Length(buffer.frameLength)
         
-        var sum: Float = 0
+        var rms: Float = 0
+        vDSP_rmsqv(channelData, 1, &rms, frameLength)
+        
         var maxSample: Float = 0
-        for i in 0..<frameLength {
-            let sample = abs(channelData[i])
-            sum += sample * sample
-            if sample > maxSample { maxSample = sample }
-        }
-        
-        let rms = sqrt(sum / Float(frameLength))
+        vDSP_maxmgv(channelData, 1, &maxSample, frameLength)
         
         if rms > speechThreshold {
             speechFrameCount += 1
@@ -88,19 +85,22 @@ class VADProcessor {
             return true
         }
         
-        var sum: Float = 0
-        var speechSamples = 0
+        let frameLength = vDSP_Length(buffer.frameLength)
+        
+        var rms: Float = 0
+        vDSP_rmsqv(channelData, 1, &rms, frameLength)
+        
         let threshold: Float = 0.015
+        var speechSamples: vDSP_Length = 0
+        var absBuffer = [Float](repeating: 0, count: Int(buffer.frameLength))
+        vDSP_vabs(channelData, 1, &absBuffer, 1, frameLength)
         
         for i in 0..<Int(buffer.frameLength) {
-            let sample = abs(channelData[i])
-            sum += sample * sample
-            if sample > threshold {
+            if absBuffer[i] > threshold {
                 speechSamples += 1
             }
         }
         
-        let rms = sqrt(sum / Float(buffer.frameLength))
         let speechRatio = Float(speechSamples) / Float(buffer.frameLength)
         
         return rms > 0.01 && speechRatio > 0.05
