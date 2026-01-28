@@ -437,15 +437,14 @@ struct SettingsContentView: View {
                         .foregroundStyle(.secondary)
                 }
                 
-                Text("Speak naturally, type instantly.")
+                Text("Speak naturally. Type instantly.")
                     .font(.headline)
                     .foregroundStyle(.secondary)
                 
-                Text("Maximizing human-machine bandwidth\nbefore Neuralink.")
+                Text("Expanding human-computer interaction bandwidth.")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
                     .multilineTextAlignment(.center)
-                    .italic()
                 
                 GlassContainer(spacing: 16) {
                     VStack(alignment: .leading, spacing: 12) {

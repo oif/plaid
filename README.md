@@ -1,31 +1,42 @@
 # Plaid
 
-**Expanding human-computer interaction bandwidth.**
-
-A modern macOS voice-to-text application with local model support, LLM correction, and a sleek floating pill interface. Your voice becomes a faster input channel than typing.
-
 <p align="center">
   <img src="icon2_zoomed.png" width="128" alt="Plaid Icon">
 </p>
 
-English | [简体中文](README.zh-CN.md)
+<p align="center">
+  <strong>Speak naturally. Type instantly.</strong><br>
+  <em>Expanding human-computer interaction bandwidth.</em>
+</p>
+
+<p align="center">
+  English | <a href="README.zh-CN.md">简体中文</a>
+</p>
+
+---
+
+Plaid is a macOS voice-to-text app that turns your speech into text faster than you can type. With local AI models, cloud APIs, and smart LLM correction, it seamlessly injects transcribed text into any application.
 
 ## Features
 
-- **Multiple STT Providers**
-  - **Local Models** - SenseVoice (INT8/FP32), Whisper (Tiny/Base/Small) via sherpa-onnx
-  - **Apple Speech** - Built-in macOS speech recognition
-  - **Cloud APIs** - Whisper API, ElevenLabs, Soniox, GLM ASR, or custom OpenAI-compatible endpoints
+**Speech Recognition**
+- Local models via sherpa-onnx (SenseVoice, Whisper) - fully offline
+- Apple Speech - system built-in
+- Cloud APIs - Whisper API, ElevenLabs, Soniox, GLM, or custom endpoints
 
-- **LLM Post-Processing** - Optional grammar and punctuation correction using any OpenAI-compatible API
+**Smart Processing**
+- LLM post-correction for grammar and punctuation
+- Custom prompts for domain-specific formatting
+- Context-aware text enhancement
 
-- **Floating Pill Interface** - Minimal, always-on-top recording indicator with waveform visualization
+**Seamless Integration**
+- Global hotkey - trigger from anywhere
+- Floating pill UI - minimal, always-on-top indicator
+- Auto text injection - directly into active app
 
-- **Global Hotkey** - Trigger recording from anywhere with a customizable keyboard shortcut
-
-- **Text Injection** - Automatically paste transcribed text into the active application
-
-- **Privacy First** - Local models run entirely on-device, no data leaves your Mac
+**Privacy First**
+- Local models run entirely on-device
+- No data leaves your Mac
 
 ## Installation
 

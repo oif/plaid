@@ -1,31 +1,42 @@
 # Plaid
 
-**拓宽人机交互带宽**
-
-一款现代化的 macOS 语音转文字应用，支持本地模型、LLM 纠错，以及简洁的悬浮胶囊界面。让语音成为比打字更快的输入方式。
-
 <p align="center">
   <img src="icon2_zoomed.png" width="128" alt="Plaid Icon">
 </p>
 
-[English](README.md) | 简体中文
+<p align="center">
+  <strong>自然说话，即时输入。</strong><br>
+  <em>拓宽人机交互带宽。</em>
+</p>
+
+<p align="center">
+  <a href="README.md">English</a> | 简体中文
+</p>
+
+---
+
+Plaid 是一款 macOS 语音转文字应用，让你的语音比打字更快地变成文字。支持本地 AI 模型、云端 API 和智能 LLM 纠错，可将转录文本无缝注入任意应用。
 
 ## 功能特性
 
-- **多种语音识别引擎**
-  - **本地模型** - 通过 sherpa-onnx 运行 SenseVoice (INT8/FP32)、Whisper (Tiny/Base/Small)
-  - **Apple Speech** - 系统内置语音识别
-  - **云端 API** - Whisper API、ElevenLabs、Soniox、GLM ASR，或自定义 OpenAI 兼容接口
+**语音识别**
+- 本地模型 via sherpa-onnx (SenseVoice, Whisper) - 完全离线
+- Apple Speech - 系统内置
+- 云端 API - Whisper API、ElevenLabs、Soniox、GLM，或自定义接口
 
-- **LLM 后处理** - 可选的语法和标点纠错，支持任意 OpenAI 兼容 API
+**智能处理**
+- LLM 后处理纠正语法和标点
+- 自定义 prompt 实现领域特定格式化
+- 上下文感知的文本增强
 
-- **悬浮胶囊界面** - 极简的置顶录音指示器，带波形可视化
+**无缝集成**
+- 全局快捷键 - 随处触发
+- 悬浮胶囊 UI - 极简置顶指示器
+- 自动文本注入 - 直接输入到当前应用
 
-- **全局快捷键** - 可自定义的键盘快捷键，随时随地触发录音
-
-- **文本注入** - 自动将转录文本输入到当前活动应用
-
-- **隐私优先** - 本地模型完全在设备上运行，数据不离开你的 Mac
+**隐私优先**
+- 本地模型完全在设备上运行
+- 数据不离开你的 Mac
 
 ## 安装
 
