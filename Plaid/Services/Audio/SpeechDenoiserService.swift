@@ -23,7 +23,7 @@ class SpeechDenoiserService {
         var config = SherpaOnnxOfflineSpeechDenoiserConfig()
         
         let modelPtr = strdup(modelPath)
-        let providerPtr = strdup("cpu")
+        let providerPtr = strdup("coreml")
         
         defer {
             free(modelPtr)
