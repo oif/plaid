@@ -153,6 +153,8 @@ class AppSettings: ObservableObject {
     // MARK: - Initialization
     
     private init() {
+        KeychainHelper.migrateIfNeeded()
+        
         // STT
         let provider = defaults.string(forKey: "sttProvider") ?? "apple"
         self.sttProvider = STTProvider(rawValue: provider) ?? .appleSpeech
@@ -162,7 +164,13 @@ class AppSettings: ObservableObject {
         
         // LLM
         self.enableLLMCorrection = defaults.object(forKey: "enableLLMCorrection") as? Bool ?? true
-        self.customPrompt = defaults.string(forKey: "customPrompt") ?? AppSettings.defaultPrompt
+        let savedPrompt = defaults.string(forKey: "customPrompt") ?? AppSettings.defaultPrompt
+        if savedPrompt.contains("{{text}}") {
+            self.customPrompt = AppSettings.defaultPrompt
+            defaults.set(AppSettings.defaultPrompt, forKey: "customPrompt")
+        } else {
+            self.customPrompt = savedPrompt
+        }
         let llmProv = defaults.string(forKey: "llmProvider") ?? "openai"
         self.llmProvider = LLMProvider(rawValue: llmProv) ?? .openAI
         self.llmModel = defaults.string(forKey: "llmModel") ?? "gpt-4o-mini"
@@ -355,22 +363,33 @@ enum NetworkSession {
 // MARK: - Keychain Helper
 
 enum KeychainHelper {
+    private static let service = "com.neospaceindustries.plaid"
+    
     static func save(key: String, value: String) {
         guard let data = value.data(using: .utf8) else { return }
         
-        let query: [String: Any] = [
+        let deleteQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: key
+        ]
+        SecItemDelete(deleteQuery as CFDictionary)
+        
+        guard !value.isEmpty else { return }
+        
+        let addQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
             kSecAttrAccount as String: key,
             kSecValueData as String: data
         ]
-        
-        SecItemDelete(query as CFDictionary)
-        SecItemAdd(query as CFDictionary, nil)
+        SecItemAdd(addQuery as CFDictionary, nil)
     }
     
     static func load(key: String) -> String? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
             kSecAttrAccount as String: key,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne
@@ -384,5 +403,30 @@ enum KeychainHelper {
         }
         
         return String(data: data, encoding: .utf8)
+    }
+    
+    static func migrateIfNeeded() {
+        let migrated = UserDefaults.standard.bool(forKey: "keychain_migrated_v1")
+        guard !migrated else { return }
+        
+        let keys = ["custom_stt_key", "elevenlabs_key", "soniox_key", "glm_key", "openai_key", "custom_llm_key"]
+        for key in keys {
+            let legacyQuery: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrAccount as String: key,
+                kSecReturnData as String: true,
+                kSecMatchLimit as String: kSecMatchLimitOne
+            ]
+            var result: AnyObject?
+            if SecItemCopyMatching(legacyQuery as CFDictionary, &result) == errSecSuccess,
+               let data = result as? Data,
+               let value = String(data: data, encoding: .utf8),
+               !value.isEmpty {
+                save(key: key, value: value)
+                SecItemDelete(legacyQuery as CFDictionary)
+            }
+        }
+        
+        UserDefaults.standard.set(true, forKey: "keychain_migrated_v1")
     }
 }

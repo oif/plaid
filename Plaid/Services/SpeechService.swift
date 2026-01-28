@@ -91,9 +91,11 @@ class SpeechService: ObservableObject {
         let originalText = try await sttService.stopListening()
         let sttDuration = Date().timeIntervalSince(sttStart)
         
-        guard !originalText.isEmpty else {
+        let hasContent = Self.hasSubstantiveContent(originalText)
+        
+        guard hasContent else {
             return TranscriptionResult(
-                originalText: "",
+                originalText: originalText,
                 processedText: "",
                 sttDuration: sttDuration,
                 llmDuration: nil,
@@ -139,9 +141,11 @@ class SpeechService: ObservableObject {
         let originalText = try await sttService.transcribeFile(at: url)
         let sttDuration = Date().timeIntervalSince(sttStart)
         
-        guard !originalText.isEmpty else {
+        let hasContent = Self.hasSubstantiveContent(originalText)
+        
+        guard hasContent else {
             return TranscriptionResult(
-                originalText: "",
+                originalText: originalText,
                 processedText: "",
                 sttDuration: sttDuration,
                 llmDuration: nil,
@@ -179,6 +183,12 @@ class SpeechService: ObservableObject {
         isListening = false
         isProcessing = false
         waveformLevels = Array(repeating: 0.1, count: 12)
+    }
+    
+    private static func hasSubstantiveContent(_ text: String) -> Bool {
+        let stripped = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !stripped.isEmpty else { return false }
+        return stripped.contains(where: { $0.isLetter || $0.isNumber })
     }
     
     private static func buildSystemPrompt(settings: AppSettings, context: AppContext) -> String {
