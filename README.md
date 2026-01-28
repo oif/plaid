@@ -8,6 +8,8 @@ A modern macOS voice-to-text application with local model support, LLM correctio
   <img src="icon2_zoomed.png" width="128" alt="Plaid Icon">
 </p>
 
+English | [简体中文](README.zh-CN.md)
+
 ## Features
 
 - **Multiple STT Providers**
