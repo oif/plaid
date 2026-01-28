@@ -200,8 +200,7 @@ class TranscriptionHistoryService: ObservableObject {
         do {
             try context.save()
             
-            let usageSeconds = sttDuration + (llmDuration ?? 0)
-            updateCumulativeStats(words: record.wordCount, usageSeconds: usageSeconds)
+            updateCumulativeStats(words: record.wordCount, usageSeconds: sttDuration)
             
             loadRecentRecords()
         } catch {
@@ -267,7 +266,7 @@ class TranscriptionHistoryService: ObservableObject {
     }
     
     var totalUsageSeconds: Double {
-        cumulativeStats?.totalUsageSeconds ?? recentRecords.reduce(0.0) { $0 + $1.sttDuration + ($1.llmDuration ?? 0) }
+        cumulativeStats?.totalUsageSeconds ?? recentRecords.reduce(0.0) { $0 + $1.sttDuration }
     }
     
     var todayWords: Int {
@@ -282,7 +281,7 @@ class TranscriptionHistoryService: ObservableObject {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         let todayRecords = recentRecords.filter { calendar.isDate($0.timestamp, inSameDayAs: today) }
-        let totalDurationMinutes = todayRecords.reduce(0.0) { $0 + $1.sttDuration + ($1.llmDuration ?? 0) } / 60.0
+        let totalDurationMinutes = todayRecords.reduce(0.0) { $0 + $1.sttDuration } / 60.0
         guard totalDurationMinutes > 0.01 else { return 0 }
         return Double(todayWords) / totalDurationMinutes
     }
@@ -292,7 +291,7 @@ class TranscriptionHistoryService: ObservableObject {
         let today = calendar.startOfDay(for: Date())
         return recentRecords
             .filter { calendar.isDate($0.timestamp, inSameDayAs: today) }
-            .reduce(0.0) { $0 + $1.sttDuration + ($1.llmDuration ?? 0) }
+            .reduce(0.0) { $0 + $1.sttDuration }
     }
     
     var timeSavedMinutes: Double {
@@ -304,9 +303,10 @@ class TranscriptionHistoryService: ObservableObject {
     static let typingWPM: Double = 40.0
     
     var voiceWPM: Double {
-        let totalDurationMinutes = totalUsageSeconds / 60.0
-        guard totalDurationMinutes > 0.01 else { return 0 }
-        return Double(totalWords) / totalDurationMinutes
+        let sttSeconds = cumulativeStats?.totalUsageSeconds ?? recentRecords.reduce(0.0) { $0 + $1.sttDuration }
+        let sttMinutes = sttSeconds / 60.0
+        guard sttMinutes > 0.01 else { return 0 }
+        return Double(totalWords) / sttMinutes
     }
     
     var averageSpeedMultiplier: Double {
@@ -346,7 +346,7 @@ class TranscriptionHistoryService: ObservableObject {
             let dayRecords = recentRecords.filter { calendar.isDate($0.timestamp, inSameDayAs: date) }
             let words = dayRecords.reduce(0) { $0 + $1.wordCount }
             let sessions = dayRecords.count
-            let usage = dayRecords.reduce(0.0) { $0 + $1.sttDuration + ($1.llmDuration ?? 0) }
+            let usage = dayRecords.reduce(0.0) { $0 + $1.sttDuration }
             
             return DailyStats(date: date, words: words, sessions: sessions, usageSeconds: usage)
         }
@@ -354,5 +354,38 @@ class TranscriptionHistoryService: ObservableObject {
     
     var maxDailyWords: Int {
         weeklyStats.map(\.words).max() ?? 1
+    }
+    
+    // MARK: - Per-App Stats
+    
+    struct AppUsageStat: Identifiable {
+        let id: String
+        let appName: String
+        let bundleId: String?
+        let sessions: Int
+        let words: Int
+        
+        var appIcon: NSImage? {
+            guard let bundleId else { return nil }
+            guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId) else { return nil }
+            return NSWorkspace.shared.icon(forFile: url.path)
+        }
+    }
+    
+    var appUsageStats: [AppUsageStat] {
+        let grouped = Dictionary(grouping: recentRecords) { $0.bundleId ?? "unknown" }
+        
+        return grouped.map { bundleId, records in
+            let name = records.first(where: { $0.appName != nil })?.appName
+                ?? (bundleId == "unknown" ? "Unknown" : bundleId)
+            return AppUsageStat(
+                id: bundleId,
+                appName: name,
+                bundleId: bundleId == "unknown" ? nil : bundleId,
+                sessions: records.count,
+                words: records.reduce(0) { $0 + $1.wordCount }
+            )
+        }
+        .sorted { $0.words > $1.words }
     }
 }

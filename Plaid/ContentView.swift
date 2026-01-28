@@ -141,22 +141,20 @@ struct ContentView: View {
     @State private var statsHovered = false
     
     private var statsStrip: some View {
-        VStack(spacing: 6) {
-            // Header
+        VStack(spacing: PlaidSpacing.sm) {
             HStack {
                 Text("TODAY")
-                    .font(.system(size: 9, weight: .bold))
+                    .font(PlaidTypography.badge)
                     .foregroundStyle(.secondary)
                     .tracking(1)
                 Spacer()
                 Text(Date(), format: .dateTime.month(.abbreviated).day())
-                    .font(.system(size: 9, weight: .medium))
+                    .font(PlaidTypography.badge)
                     .foregroundStyle(.tertiary)
             }
             .padding(.horizontal, 2)
             
-            // Stats Grid
-            HStack(spacing: 12) {
+            HStack(spacing: PlaidSpacing.md) {
                 todayStatItem(
                     value: historyService.todayWPM > 0 ? "\(Int(historyService.todayWPM))" : "-",
                     label: "WPM",
@@ -179,22 +177,22 @@ struct ContentView: View {
                 )
                 
                 todayStatItem(
-                    value: "#--",
-                    label: "Rank",
-                    icon: "globe",
+                    value: "\(historyService.todayCount)",
+                    label: "Sessions",
+                    icon: "text.bubble",
                     color: .purple
                 )
             }
         }
-        .padding(.vertical, 10)
-        .padding(.horizontal, 12)
+        .padding(.vertical, PlaidSpacing.md)
+        .padding(.horizontal, PlaidSpacing.md)
         .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(.secondary.opacity(statsHovered ? 0.1 : 0.06))
+            RoundedRectangle(cornerRadius: PlaidRadius.md)
+                .fill(.secondary.opacity(statsHovered ? PlaidOpacity.light : PlaidOpacity.subtle))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .strokeBorder(.secondary.opacity(statsHovered ? 0.15 : 0), lineWidth: 1)
+            RoundedRectangle(cornerRadius: PlaidRadius.md)
+                .strokeBorder(.secondary.opacity(statsHovered ? PlaidOpacity.medium : 0), lineWidth: 1)
         )
         .scaleEffect(statsHovered ? 1.01 : 1.0)
         .animation(.easeInOut(duration: 0.15), value: statsHovered)
@@ -205,9 +203,9 @@ struct ContentView: View {
     }
     
     private func todayStatItem(value: String, label: String, icon: String, color: Color) -> some View {
-        VStack(spacing: 3) {
+        VStack(spacing: PlaidSpacing.xs) {
             Image(systemName: icon)
-                .font(.system(size: 9))
+                .font(PlaidTypography.tiny)
                 .foregroundStyle(color.opacity(0.7))
             
             Text(value)
@@ -293,7 +291,7 @@ struct ContentView: View {
                     .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(.primary.opacity(0.8))
                 
-                Text("Press **fn + Space** anywhere\nto start voice input")
+                Text("Press **\(appState.settings.hotkeyDisplayString)** anywhere\nto start voice input")
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -422,12 +420,27 @@ struct ContentView: View {
                         )
                     }
                     
-                    WeeklyActivityChart(
-                        stats: historyService.weeklyStats,
-                        maxWords: historyService.maxDailyWords
-                    )
+                    if isWide {
+                        HStack(alignment: .top, spacing: 16) {
+                            WeeklyActivityChart(
+                                stats: historyService.weeklyStats,
+                                maxWords: historyService.maxDailyWords
+                            )
+                            .frame(maxWidth: .infinity)
+                            
+                            AppUsageCard(stats: historyService.appUsageStats)
+                                .frame(maxWidth: .infinity)
+                        }
+                    } else {
+                        WeeklyActivityChart(
+                            stats: historyService.weeklyStats,
+                            maxWords: historyService.maxDailyWords
+                        )
+                        
+                        AppUsageCard(stats: historyService.appUsageStats)
+                    }
                     
-                    QuickStartCard()
+                    QuickStartCard(hotkeyParts: appState.settings.hotkeyParts)
                 }
                 .padding(24)
                 .frame(maxWidth: .infinity)

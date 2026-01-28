@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 // MARK: - Hero Time Saved Card
 
@@ -62,12 +63,21 @@ struct HeroTimeSavedCard: View {
             }
             
             HStack(spacing: 8) {
-                Image(systemName: "arrow.up.right")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.8))
-                Text("That's \(formattedTime) you've gained back")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.7))
+                if timeSaved >= 1 {
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.8))
+                    Text("That's \(formattedTime) you've gained back")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.7))
+                } else {
+                    Image(systemName: "mic.fill")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.6))
+                    Text("Start dictating to see time saved")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.5))
+                }
                 Spacer()
             }
         }
@@ -396,6 +406,7 @@ struct WeeklyActivityChart: View {
 // MARK: - Quick Start Card
 
 struct QuickStartCard: View {
+    let hotkeyParts: [String]
     @State private var isHovered = false
     
     var body: some View {
@@ -422,11 +433,14 @@ struct QuickStartCard: View {
                     .foregroundStyle(.primary)
                 
                 HStack(spacing: 6) {
-                    KeyCapView(text: "fn")
-                    Text("+")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.tertiary)
-                    KeyCapView(text: "Space")
+                    ForEach(Array(hotkeyParts.enumerated()), id: \.offset) { index, part in
+                        if index > 0 {
+                            Text("+")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundStyle(.tertiary)
+                        }
+                        KeyCapView(text: part)
+                    }
                     Text("anywhere")
                         .font(.system(size: 11))
                         .foregroundStyle(.tertiary)
@@ -483,6 +497,126 @@ struct KeyCapView: View {
                     )
                     .shadow(color: .black.opacity(0.08), radius: 1, y: 1)
             }
+    }
+}
+
+// MARK: - App Usage Card
+
+struct AppUsageCard: View {
+    let stats: [TranscriptionHistoryService.AppUsageStat]
+    @State private var isHovered = false
+    
+    private var displayStats: [TranscriptionHistoryService.AppUsageStat] {
+        Array(stats.prefix(5))
+    }
+    
+    private var maxWords: Int {
+        displayStats.first?.words ?? 1
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: PlaidSpacing.lg) {
+            HStack {
+                Text("App Usage")
+                    .font(.system(size: 13, weight: .semibold))
+                Spacer()
+                Text("\(stats.count) apps")
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+            }
+            
+            if stats.isEmpty {
+                emptyState
+            } else {
+                VStack(spacing: PlaidSpacing.sm) {
+                    ForEach(displayStats) { stat in
+                        appRow(stat)
+                    }
+                }
+            }
+        }
+        .padding(PlaidSpacing.lg)
+        .background(.secondary.opacity(PlaidOpacity.subtle), in: RoundedRectangle(cornerRadius: PlaidRadius.lg))
+        .overlay(
+            RoundedRectangle(cornerRadius: PlaidRadius.lg)
+                .strokeBorder(.secondary.opacity(isHovered ? PlaidOpacity.medium : 0.08), lineWidth: 1)
+        )
+        .scaleEffect(isHovered ? PlaidHoverScale.subtle : 1.0)
+        .animation(PlaidAnimation.Spring.default, value: isHovered)
+        .onHover { hovering in
+            isHovered = hovering
+        }
+    }
+    
+    private var emptyState: some View {
+        HStack {
+            Spacer()
+            VStack(spacing: PlaidSpacing.sm) {
+                Image(systemName: "app.dashed")
+                    .font(.system(size: 20))
+                    .foregroundStyle(.tertiary)
+                Text("Usage by app will appear here")
+                    .font(PlaidTypography.caption)
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.vertical, PlaidSpacing.lg)
+            Spacer()
+        }
+    }
+    
+    private func appRow(_ stat: TranscriptionHistoryService.AppUsageStat) -> some View {
+        HStack(spacing: PlaidSpacing.sm) {
+            Group {
+                if let icon = stat.appIcon {
+                    Image(nsImage: icon)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                } else {
+                    Image(systemName: "app.fill")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(.secondary.opacity(PlaidOpacity.subtle))
+                }
+            }
+            .frame(width: 22, height: 22)
+            .clipShape(RoundedRectangle(cornerRadius: 5))
+            
+            Text(stat.appName)
+                .font(.system(size: 11, weight: .medium))
+                .lineLimit(1)
+                .frame(width: 70, alignment: .leading)
+            
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(.secondary.opacity(PlaidOpacity.light))
+                    
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [.accentColor, .accentColor.opacity(0.6)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(width: barWidth(for: stat, in: geo.size.width))
+                }
+            }
+            .frame(height: 6)
+            
+            Text("\(stat.words)")
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+                .frame(minWidth: 32, alignment: .trailing)
+        }
+    }
+    
+    private func barWidth(for stat: TranscriptionHistoryService.AppUsageStat, in totalWidth: CGFloat) -> CGFloat {
+        guard maxWords > 0 else { return 0 }
+        let ratio = CGFloat(stat.words) / CGFloat(maxWords)
+        return max(4, ratio * totalWidth)
     }
 }
 
