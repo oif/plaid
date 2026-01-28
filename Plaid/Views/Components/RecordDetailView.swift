@@ -103,6 +103,26 @@ struct RecordDetailView: View {
                 )
             }
             
+            if let appName = record.appName {
+                HStack(spacing: 8) {
+                    if let icon = record.appIcon {
+                        Image(nsImage: icon)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 20, height: 20)
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                    }
+                    Text(appName)
+                        .font(.system(size: 12, weight: .medium))
+                    if let bundleId = record.bundleId {
+                        Text(bundleId)
+                            .font(.system(size: 10))
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                .foregroundStyle(.secondary)
+            }
+            
             HStack(spacing: 12) {
                 DetailStatPill(value: "\(record.wordCount)", label: "words", icon: "text.word.spacing")
                 DetailStatPill(value: "\(record.characterCount)", label: "chars", icon: "character.cursor.ibeam")

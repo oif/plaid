@@ -1,5 +1,6 @@
 import Foundation
 import SwiftData
+import AppKit
 
 @Model
 final class CumulativeStats {
@@ -26,13 +27,17 @@ final class TranscriptionRecord {
     var sttDuration: Double
     var llmDuration: Double?
     var characterCount: Int
+    var appName: String?
+    var bundleId: String?
     
     init(
         originalText: String,
         correctedText: String? = nil,
         sttProvider: String,
         sttDuration: Double,
-        llmDuration: Double? = nil
+        llmDuration: Double? = nil,
+        appName: String? = nil,
+        bundleId: String? = nil
     ) {
         self.id = UUID()
         self.timestamp = Date()
@@ -42,6 +47,8 @@ final class TranscriptionRecord {
         self.sttDuration = sttDuration
         self.llmDuration = llmDuration
         self.characterCount = (correctedText ?? originalText).count
+        self.appName = appName
+        self.bundleId = bundleId
     }
     
     var displayText: String {
@@ -85,6 +92,12 @@ final class TranscriptionRecord {
         }
         
         return max(count, 1)
+    }
+    
+    var appIcon: NSImage? {
+        guard let bundleId else { return nil }
+        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId) else { return nil }
+        return NSWorkspace.shared.icon(forFile: url.path)
     }
     
     var formattedTimestamp: String {
@@ -166,7 +179,9 @@ class TranscriptionHistoryService: ObservableObject {
         correctedText: String?,
         sttProvider: String,
         sttDuration: Double,
-        llmDuration: Double?
+        llmDuration: Double?,
+        appName: String? = nil,
+        bundleId: String? = nil
     ) {
         guard let context = modelContext else { return }
         
@@ -175,7 +190,9 @@ class TranscriptionHistoryService: ObservableObject {
             correctedText: correctedText,
             sttProvider: sttProvider,
             sttDuration: sttDuration,
-            llmDuration: llmDuration
+            llmDuration: llmDuration,
+            appName: appName,
+            bundleId: bundleId
         )
         
         context.insert(record)

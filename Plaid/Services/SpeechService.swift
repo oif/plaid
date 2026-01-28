@@ -7,6 +7,7 @@ struct TranscriptionResult {
     let sttDuration: Double
     let llmDuration: Double?
     let sttProvider: String
+    let appContext: AppContext?
     
     var finalText: String { processedText }
     var wasEnhanced: Bool { llmDuration != nil }
@@ -104,7 +105,8 @@ class SpeechService: ObservableObject {
                 processedText: "",
                 sttDuration: sttDuration,
                 llmDuration: nil,
-                sttProvider: settings.sttProvider.rawValue
+                sttProvider: settings.sttProvider.rawValue,
+                appContext: appContext
             )
         }
         
@@ -113,8 +115,8 @@ class SpeechService: ObservableObject {
         
         if settings.enableLLMCorrection && !settings.effectiveLLMApiKey.isEmpty {
             let llmStart = Date()
-            let systemPrompt = Self.buildSystemPrompt(settings: settings, context: appContext)
-            processedText = try await llmService.process(originalText, systemPrompt: systemPrompt)
+            let messages = Self.buildMessages(text: originalText, settings: settings, context: appContext)
+            processedText = try await llmService.process(messages: messages)
             llmDuration = Date().timeIntervalSince(llmStart)
         }
         
@@ -123,7 +125,8 @@ class SpeechService: ObservableObject {
             processedText: processedText,
             sttDuration: sttDuration,
             llmDuration: llmDuration,
-            sttProvider: settings.sttProvider.rawValue
+            sttProvider: settings.sttProvider.rawValue,
+            appContext: appContext
         )
         
         saveToHistory(result)
@@ -154,7 +157,8 @@ class SpeechService: ObservableObject {
                 processedText: "",
                 sttDuration: sttDuration,
                 llmDuration: nil,
-                sttProvider: settings.sttProvider.rawValue
+                sttProvider: settings.sttProvider.rawValue,
+                appContext: appContext
             )
         }
         
@@ -163,8 +167,8 @@ class SpeechService: ObservableObject {
         
         if settings.enableLLMCorrection && !settings.effectiveLLMApiKey.isEmpty {
             let llmStart = Date()
-            let systemPrompt = Self.buildSystemPrompt(settings: settings, context: appContext)
-            processedText = try await llmService.process(originalText, systemPrompt: systemPrompt)
+            let messages = Self.buildMessages(text: originalText, settings: settings, context: appContext)
+            processedText = try await llmService.process(messages: messages)
             llmDuration = Date().timeIntervalSince(llmStart)
         }
         
@@ -173,7 +177,8 @@ class SpeechService: ObservableObject {
             processedText: processedText,
             sttDuration: sttDuration,
             llmDuration: llmDuration,
-            sttProvider: settings.sttProvider.rawValue
+            sttProvider: settings.sttProvider.rawValue,
+            appContext: appContext
         )
         
         saveToHistory(result)
@@ -196,10 +201,12 @@ class SpeechService: ObservableObject {
         return stripped.contains(where: { $0.isLetter || $0.isNumber })
     }
     
-    private static func buildSystemPrompt(settings: AppSettings, context: AppContext) -> String {
-        var prompt = settings.customPrompt
+    private static func buildMessages(text: String, settings: AppSettings, context: AppContext) -> [[String: String]] {
+        let systemPrompt = settings.customSystemPrompt
+            .trimmingCharacters(in: .whitespacesAndNewlines)
         
-        // Inject app context
+        var userPrompt = settings.customUserPrompt
+        
         var contextParts: [String] = []
         if let appName = context.appName {
             contextParts.append("当前应用：\(appName)")
@@ -208,25 +215,24 @@ class SpeechService: ObservableObject {
             contextParts.append("输入位置：\(element)")
         }
         if contextParts.isEmpty {
-            prompt = prompt.replacingOccurrences(of: "{{context}}", with: "")
+            userPrompt = userPrompt.replacingOccurrences(of: "{{context}}", with: "")
         } else {
-            let contextBlock = "\n**上下文：**\n" + contextParts.joined(separator: "\n")
-            prompt = prompt.replacingOccurrences(of: "{{context}}", with: contextBlock)
+            let contextBlock = "**上下文：**\n" + contextParts.joined(separator: "\n")
+            userPrompt = userPrompt.replacingOccurrences(of: "{{context}}", with: contextBlock)
         }
         
-        // Inject vocabulary
-        let vocab = settings.customVocabulary
-        if vocab.isEmpty {
-            prompt = prompt.replacingOccurrences(of: "{{vocabulary}}", with: "")
-        } else {
-            let vocabBlock = "\n**参考词表（优先使用这些拼写）：**\n" + vocab.joined(separator: "、")
-            prompt = prompt.replacingOccurrences(of: "{{vocabulary}}", with: vocabBlock)
-        }
+        let builtIn = ["Plaid"]
+        let vocab = builtIn + settings.customVocabulary.filter { !builtIn.contains($0) }
+        let vocabBlock = "**参考词表（优先使用这些拼写）：**\n" + vocab.joined(separator: "、")
+        userPrompt = userPrompt.replacingOccurrences(of: "{{vocabulary}}", with: vocabBlock)
         
-        // Clean up legacy {{text}} placeholder for users with old custom prompts
-        prompt = prompt.replacingOccurrences(of: "{{text}}", with: "")
+        userPrompt = userPrompt.replacingOccurrences(of: "{{text}}", with: text)
+        userPrompt = userPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
         
-        return prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        return [
+            ["role": "system", "content": systemPrompt],
+            ["role": "user", "content": userPrompt]
+        ]
     }
     
     private func saveToHistory(_ result: TranscriptionResult) {
@@ -237,7 +243,9 @@ class SpeechService: ObservableObject {
             correctedText: result.wasEnhanced ? result.processedText : nil,
             sttProvider: result.sttProvider,
             sttDuration: result.sttDuration,
-            llmDuration: result.llmDuration
+            llmDuration: result.llmDuration,
+            appName: result.appContext?.appName,
+            bundleId: result.appContext?.bundleId
         )
     }
 }
