@@ -9,6 +9,10 @@ struct PlaidApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(appState)
+                .environmentObject(AppSettings.shared)
+                .environmentObject(ModelManager.shared)
+                .environmentObject(AudioInputManager.shared)
+                .environmentObject(TranscriptionHistoryService.shared)
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
@@ -22,10 +26,13 @@ struct PlaidApp: App {
         Window("Compact", id: "compact") {
             CompactWindowView()
                 .environmentObject(appState)
+                .environmentObject(AppSettings.shared)
+                .environmentObject(ModelManager.shared)
+                .environmentObject(AudioInputManager.shared)
         }
-        .windowStyle(.plain)
         .windowResizability(.contentSize)
         .defaultPosition(.topTrailing)
+        .windowStyle(.hiddenTitleBar)
         
         MenuBarExtra {
             MenuBarView()
@@ -117,7 +124,8 @@ class AppState: ObservableObject {
         guard ModelManager.shared.isModelAvailable(model) else { return }
         
         do {
-            try await SherpaOnnxService.shared.initializeAsync(with: model)
+            let language = await AppSettings.shared.language
+            try await SherpaOnnxService.shared.initializeAsync(with: model, language: language)
             SherpaOnnxService.shared.warmup()
             Logger.models.info("Local model preloaded: \(model.displayName)")
         } catch {

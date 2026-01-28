@@ -39,6 +39,19 @@
 		B513EC122F27D100005F4669 /* SparkleUpdater.swift in Sources */ = {isa = PBXBuildFile; fileRef = B513EC112F27D100005F4669 /* SparkleUpdater.swift */; };
 		B513EC432F28A100005F4669 /* Logger+Plaid.swift in Sources */ = {isa = PBXBuildFile; fileRef = B513EC412F28A100005F4669 /* Logger+Plaid.swift */; };
 		B513EC442F28A100005F4669 /* DiagnosticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B513EC422F28A100005F4669 /* DiagnosticsManager.swift */; };
+		B513EC502F28B000005F4669 /* AppDirectories.swift in Sources */ = {isa = PBXBuildFile; fileRef = B513EC512F28B000005F4669 /* AppDirectories.swift */; };
+		B513EC602F28C000005F4669 /* RecordRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B513EC612F28C000005F4669 /* RecordRow.swift */; };
+		B513EC622F28C000005F4669 /* RecordDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B513EC632F28C000005F4669 /* RecordDetailView.swift */; };
+		B513EC642F28C000005F4669 /* DashboardCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = B513EC652F28C000005F4669 /* DashboardCards.swift */; };
+		B513EC662F28C000005F4669 /* TabComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = B513EC672F28C000005F4669 /* TabComponents.swift */; };
+		D513EC822F28C000005F4669 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = D513EC812F28C000005F4669 /* Theme.swift */; };
+		D513EC842F28C000005F4669 /* Animations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D513EC832F28C000005F4669 /* Animations.swift */; };
+		E513EC902F28D000005F4669 /* SettingsContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E513EC912F28D000005F4669 /* SettingsContainer.swift */; };
+		E513EC922F28D000005F4669 /* GeneralSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E513EC932F28D000005F4669 /* GeneralSettingsView.swift */; };
+		F513EC942F28D000005F4669 /* SpeechSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F513EC952F28D000005F4669 /* SpeechSettingsView.swift */; };
+		F513EC962F28D000005F4669 /* IntegrationsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F513EC972F28D000005F4669 /* IntegrationsSettingsView.swift */; };
+		F513EC982F28D000005F4669 /* AboutSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F513EC992F28D000005F4669 /* AboutSettingsView.swift */; };
+		F513EC9A2F28D000005F4669 /* DiagnosticsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F513EC9B2F28D000005F4669 /* DiagnosticsSettingsView.swift */; };
 		C10000010000000000000001 /* libsherpa-onnx-c-api.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = C20000010000000000000001 /* libsherpa-onnx-c-api.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		C10000010000000000000002 /* libonnxruntime.1.20.1.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = C20000010000000000000002 /* libonnxruntime.1.20.1.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 /* End PBXBuildFile section */
@@ -79,6 +92,19 @@
 		B513EC112F27D100005F4669 /* SparkleUpdater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SparkleUpdater.swift; sourceTree = "<group>"; };
 		B513EC412F28A100005F4669 /* Logger+Plaid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Logger+Plaid.swift"; sourceTree = "<group>"; };
 		B513EC422F28A100005F4669 /* DiagnosticsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsManager.swift; sourceTree = "<group>"; };
+		B513EC512F28B000005F4669 /* AppDirectories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDirectories.swift; sourceTree = "<group>"; };
+		B513EC612F28C000005F4669 /* RecordRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordRow.swift; sourceTree = "<group>"; };
+		B513EC632F28C000005F4669 /* RecordDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordDetailView.swift; sourceTree = "<group>"; };
+		B513EC652F28C000005F4669 /* DashboardCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardCards.swift; sourceTree = "<group>"; };
+		B513EC672F28C000005F4669 /* TabComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabComponents.swift; sourceTree = "<group>"; };
+		D513EC812F28C000005F4669 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		D513EC832F28C000005F4669 /* Animations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Animations.swift; sourceTree = "<group>"; };
+		E513EC912F28D000005F4669 /* SettingsContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsContainer.swift; sourceTree = "<group>"; };
+		E513EC932F28D000005F4669 /* GeneralSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsView.swift; sourceTree = "<group>"; };
+		F513EC952F28D000005F4669 /* SpeechSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechSettingsView.swift; sourceTree = "<group>"; };
+		F513EC972F28D000005F4669 /* IntegrationsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntegrationsSettingsView.swift; sourceTree = "<group>"; };
+		F513EC992F28D000005F4669 /* AboutSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutSettingsView.swift; sourceTree = "<group>"; };
+		F513EC9B2F28D000005F4669 /* DiagnosticsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsSettingsView.swift; sourceTree = "<group>"; };
 		C20000010000000000000001 /* libsherpa-onnx-c-api.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libsherpa-onnx-c-api.dylib"; path = "Frameworks/sherpa-onnx/lib/libsherpa-onnx-c-api.dylib"; sourceTree = "<group>"; };
 		C20000010000000000000002 /* libonnxruntime.1.20.1.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libonnxruntime.1.20.1.dylib"; path = "Frameworks/sherpa-onnx/lib/libonnxruntime.1.20.1.dylib"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -126,6 +152,7 @@
 				A20000010000000000000019 /* Plaid-Bridging-Header.h */,
 				A20000010000000000000001 /* PlaidApp.swift */,
 				A20000010000000000000002 /* ContentView.swift */,
+				D513EC802F28C000005F4669 /* DesignSystem */,
 				A40000010000000000000003 /* Services */,
 				A40000010000000000000004 /* Views */,
 				A20000010000000000000003 /* Assets.xcassets */,
@@ -162,6 +189,7 @@
 				A20000010000000000000018 /* SherpaOnnxService.swift */,
 				A20000010000000000000034 /* AudioTypes.swift */,
 				B513EC112F27D100005F4669 /* SparkleUpdater.swift */,
+				B513EC512F28B000005F4669 /* AppDirectories.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -178,6 +206,8 @@
 		A40000010000000000000004 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				B513EC702F28C000005F4669 /* Components */,
+				E513EC942F28D000005F4669 /* Settings */,
 				B513EBF32F27921B005F4669 /* TranscriptionPillView.swift */,
 				A20000010000000000000009 /* SettingsView.swift */,
 				A20000010000000000000013 /* AudioWaveformView.swift */,
@@ -185,6 +215,39 @@
 				B513EC1F2F27E000005F4669 /* GlassCompat.swift */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		E513EC942F28D000005F4669 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				E513EC912F28D000005F4669 /* SettingsContainer.swift */,
+				E513EC932F28D000005F4669 /* GeneralSettingsView.swift */,
+				F513EC952F28D000005F4669 /* SpeechSettingsView.swift */,
+				F513EC972F28D000005F4669 /* IntegrationsSettingsView.swift */,
+				F513EC992F28D000005F4669 /* AboutSettingsView.swift */,
+				F513EC9B2F28D000005F4669 /* DiagnosticsSettingsView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		B513EC702F28C000005F4669 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				B513EC612F28C000005F4669 /* RecordRow.swift */,
+				B513EC632F28C000005F4669 /* RecordDetailView.swift */,
+				B513EC652F28C000005F4669 /* DashboardCards.swift */,
+				B513EC672F28C000005F4669 /* TabComponents.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		D513EC802F28C000005F4669 /* DesignSystem */ = {
+			isa = PBXGroup;
+			children = (
+				D513EC812F28C000005F4669 /* Theme.swift */,
+				D513EC832F28C000005F4669 /* Animations.swift */,
+			);
+			path = DesignSystem;
 			sourceTree = "<group>";
 		};
 		A40000010000000000000005 /* Frameworks */ = {
@@ -316,6 +379,19 @@
 				B513EC122F27D100005F4669 /* SparkleUpdater.swift in Sources */,
 				B513EC432F28A100005F4669 /* Logger+Plaid.swift in Sources */,
 				B513EC442F28A100005F4669 /* DiagnosticsManager.swift in Sources */,
+				B513EC502F28B000005F4669 /* AppDirectories.swift in Sources */,
+				B513EC602F28C000005F4669 /* RecordRow.swift in Sources */,
+				B513EC622F28C000005F4669 /* RecordDetailView.swift in Sources */,
+				B513EC642F28C000005F4669 /* DashboardCards.swift in Sources */,
+				B513EC662F28C000005F4669 /* TabComponents.swift in Sources */,
+				D513EC822F28C000005F4669 /* Theme.swift in Sources */,
+				D513EC842F28C000005F4669 /* Animations.swift in Sources */,
+				E513EC902F28D000005F4669 /* SettingsContainer.swift in Sources */,
+				E513EC922F28D000005F4669 /* GeneralSettingsView.swift in Sources */,
+				F513EC942F28D000005F4669 /* SpeechSettingsView.swift in Sources */,
+				F513EC962F28D000005F4669 /* IntegrationsSettingsView.swift in Sources */,
+				F513EC982F28D000005F4669 /* AboutSettingsView.swift in Sources */,
+				F513EC9A2F28D000005F4669 /* DiagnosticsSettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
