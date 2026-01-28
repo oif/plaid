@@ -162,14 +162,8 @@ class ModelManager: ObservableObject {
     // MARK: - Paths
     
     nonisolated var modelsDirectory: URL {
-        let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let modelsDir = appSupport.appendingPathComponent("Plaid/Models", isDirectory: true)
-        
-        // Create if doesn't exist
-        if !fileManager.fileExists(atPath: modelsDir.path) {
-            try? fileManager.createDirectory(at: modelsDir, withIntermediateDirectories: true)
-        }
-        
+        let modelsDir = AppDirectories.models
+        try? AppDirectories.ensureDirectoryExists(modelsDir)
         return modelsDir
     }
     

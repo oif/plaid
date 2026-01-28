@@ -183,10 +183,7 @@ class SpeechDenoiserService {
     
     private func denoiserModelPath() -> String? {
         let fm = FileManager.default
-        
-        let appSupport = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let modelsDir = appSupport.appendingPathComponent("Plaid/Models")
-        let modelPath = modelsDir.appendingPathComponent("gtcrn_simple.onnx")
+        let modelPath = AppDirectories.models.appendingPathComponent("gtcrn_simple.onnx")
         
         if fm.fileExists(atPath: modelPath.path) {
             return modelPath.path
@@ -195,11 +192,6 @@ class SpeechDenoiserService {
         if let bundledPath = Bundle.main.resourceURL?.appendingPathComponent("Models/gtcrn_simple.onnx"),
            fm.fileExists(atPath: bundledPath.path) {
             return bundledPath.path
-        }
-        
-        let devPath = "/Users/neo/Desktop/thyper/Models/gtcrn_simple.onnx"
-        if fm.fileExists(atPath: devPath) {
-            return devPath
         }
         
         print("SpeechDenoiser: Model not found")

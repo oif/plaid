@@ -23,10 +23,9 @@ final class DiagnosticsManager: ObservableObject {
     private var logDriver: FileLogDriver?
     
     private let logFileURL: URL = {
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let plaidDir = appSupport.appendingPathComponent("Plaid", isDirectory: true)
-        try? FileManager.default.createDirectory(at: plaidDir, withIntermediateDirectories: true)
-        return plaidDir.appendingPathComponent("plaid.log")
+        let logsDir = AppDirectories.logs
+        try? AppDirectories.ensureDirectoryExists(logsDir)
+        return logsDir.appendingPathComponent("plaid.log")
     }()
     
     // MARK: - Types

@@ -162,26 +162,15 @@ class SileroVADService {
     
     private func vadModelPath() -> String? {
         let fm = FileManager.default
-        
-        // Check in Models directory (Application Support)
-        let appSupport = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let modelsDir = appSupport.appendingPathComponent("Plaid/Models")
-        let vadPath = modelsDir.appendingPathComponent("silero_vad.onnx")
+        let vadPath = AppDirectories.models.appendingPathComponent("silero_vad.onnx")
         
         if fm.fileExists(atPath: vadPath.path) {
             return vadPath.path
         }
         
-        // Check in bundled resources
         if let bundledPath = Bundle.main.resourceURL?.appendingPathComponent("Models/silero_vad.onnx"),
            fm.fileExists(atPath: bundledPath.path) {
             return bundledPath.path
-        }
-        
-        // Development fallback
-        let devPath = "/Users/neo/Desktop/thyper/Models/silero_vad.onnx"
-        if fm.fileExists(atPath: devPath) {
-            return devPath
         }
         
         print("SileroVAD: Model not found. Download from: https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx")
@@ -198,10 +187,8 @@ class SileroVADService {
         URL(string: "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx")!
     }
     
-    /// Get expected model path for download
     var expectedModelPath: URL {
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        return appSupport.appendingPathComponent("Plaid/Models/silero_vad.onnx")
+        AppDirectories.models.appendingPathComponent("silero_vad.onnx")
     }
 }
 
