@@ -14,7 +14,6 @@ struct SpeechSettingsView: View {
     @Binding var glmApiKey: String
     
     // Local state
-    @State private var newVocabWord = ""
     @State private var showModelError: String?
     
     var body: some View {
@@ -24,7 +23,6 @@ struct SpeechSettingsView: View {
                 sttSection
                 audioProcessingSection
                 llmSection
-                vocabularySection
             }
             .padding()
         }
@@ -224,65 +222,6 @@ struct SpeechSettingsView: View {
                     .strokeBorder(.secondary.opacity(0.1), lineWidth: 1)
             )
         }
-    }
-    
-    // MARK: - Vocabulary Section
-    
-    private var vocabularySection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("CUSTOM VOCABULARY")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .tracking(0.5)
-            
-            VStack(spacing: 0) {
-                HStack {
-                    TextField("Add word or phrase", text: $newVocabWord)
-                        .textFieldStyle(.roundedBorder)
-                        .onSubmit { addVocabWord() }
-                    Button("Add") { addVocabWord() }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(newVocabWord.isEmpty)
-                }
-                .padding()
-                
-                if !settings.customVocabulary.isEmpty {
-                    Divider()
-                        .padding(.horizontal)
-                    
-                    VStack(spacing: 0) {
-                        ForEach(settings.customVocabulary, id: \.self) { word in
-                            HStack {
-                                Text(word)
-                                    .font(.system(size: 13))
-                                Spacer()
-                                Button {
-                                    settings.customVocabulary.removeAll { $0 == word }
-                                } label: {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .foregroundStyle(.secondary)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                            .padding(.horizontal)
-                            .padding(.vertical, 8)
-                        }
-                    }
-                }
-            }
-            .background(.secondary.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .strokeBorder(.secondary.opacity(0.1), lineWidth: 1)
-            )
-        }
-    }
-    
-    private func addVocabWord() {
-        let trimmed = newVocabWord.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        settings.customVocabulary.append(trimmed)
-        newVocabWord = ""
     }
     
     private func promptEditor(title: String, text: Binding<String>, defaultValue: String, hint: String) -> some View {

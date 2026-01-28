@@ -21,6 +21,8 @@ struct SettingsContentView: View {
                 generalTab
             case .speech:
                 speechTab
+            case .vocabulary:
+                vocabularyTab
             case .integrations:
                 integrationsTab
             case .diagnostics:
@@ -54,6 +56,10 @@ struct SettingsContentView: View {
             sonioxApiKey: $sonioxApiKey,
             glmApiKey: $glmApiKey
         )
+    }
+    
+    private var vocabularyTab: some View {
+        VocabularySettingsView()
     }
     
     private var integrationsTab: some View {

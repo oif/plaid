@@ -46,6 +46,7 @@
 		E513EC902F28D000005F4669 /* SettingsContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E513EC912F28D000005F4669 /* SettingsContainer.swift */; };
 		E513EC922F28D000005F4669 /* GeneralSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E513EC932F28D000005F4669 /* GeneralSettingsView.swift */; };
 		F513EC942F28D000005F4669 /* SpeechSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F513EC952F28D000005F4669 /* SpeechSettingsView.swift */; };
+		F513EC952F28D100005F4669 /* VocabularySettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F513EC962F28D100005F4669 /* VocabularySettingsView.swift */; };
 		F513EC962F28D000005F4669 /* IntegrationsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F513EC972F28D000005F4669 /* IntegrationsSettingsView.swift */; };
 		F513EC982F28D000005F4669 /* AboutSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F513EC992F28D000005F4669 /* AboutSettingsView.swift */; };
 		F513EC9A2F28D000005F4669 /* DiagnosticsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F513EC9B2F28D000005F4669 /* DiagnosticsSettingsView.swift */; };
@@ -96,6 +97,7 @@
 		E513EC912F28D000005F4669 /* SettingsContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsContainer.swift; sourceTree = "<group>"; };
 		E513EC932F28D000005F4669 /* GeneralSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsView.swift; sourceTree = "<group>"; };
 		F513EC952F28D000005F4669 /* SpeechSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechSettingsView.swift; sourceTree = "<group>"; };
+		F513EC962F28D100005F4669 /* VocabularySettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VocabularySettingsView.swift; sourceTree = "<group>"; };
 		F513EC972F28D000005F4669 /* IntegrationsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntegrationsSettingsView.swift; sourceTree = "<group>"; };
 		F513EC992F28D000005F4669 /* AboutSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutSettingsView.swift; sourceTree = "<group>"; };
 		F513EC9B2F28D000005F4669 /* DiagnosticsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsSettingsView.swift; sourceTree = "<group>"; };
@@ -217,6 +219,7 @@
 				E513EC912F28D000005F4669 /* SettingsContainer.swift */,
 				E513EC932F28D000005F4669 /* GeneralSettingsView.swift */,
 				F513EC952F28D000005F4669 /* SpeechSettingsView.swift */,
+				F513EC962F28D100005F4669 /* VocabularySettingsView.swift */,
 				F513EC972F28D000005F4669 /* IntegrationsSettingsView.swift */,
 				F513EC992F28D000005F4669 /* AboutSettingsView.swift */,
 				F513EC9B2F28D000005F4669 /* DiagnosticsSettingsView.swift */,
@@ -380,6 +383,7 @@
 				E513EC902F28D000005F4669 /* SettingsContainer.swift in Sources */,
 				E513EC922F28D000005F4669 /* GeneralSettingsView.swift in Sources */,
 				F513EC942F28D000005F4669 /* SpeechSettingsView.swift in Sources */,
+				F513EC952F28D100005F4669 /* VocabularySettingsView.swift in Sources */,
 				F513EC962F28D000005F4669 /* IntegrationsSettingsView.swift in Sources */,
 				F513EC982F28D000005F4669 /* AboutSettingsView.swift in Sources */,
 				F513EC9A2F28D000005F4669 /* DiagnosticsSettingsView.swift in Sources */,

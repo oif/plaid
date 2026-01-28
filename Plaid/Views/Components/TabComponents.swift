@@ -19,6 +19,7 @@ enum MainTab: String, CaseIterable {
 enum SettingsSection: String, CaseIterable, Identifiable {
     case general = "General"
     case speech = "Speech"
+    case vocabulary = "Vocabulary"
     case integrations = "Integrations"
     case diagnostics = "Diagnostics"
     case about = "About"
@@ -29,6 +30,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         switch self {
         case .general: return "gear"
         case .speech: return "waveform"
+        case .vocabulary: return "character.book.closed"
         case .integrations: return "puzzlepiece.extension"
         case .diagnostics: return "stethoscope"
         case .about: return "info.circle"
