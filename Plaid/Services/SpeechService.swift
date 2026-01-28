@@ -202,11 +202,14 @@ class SpeechService: ObservableObject {
     }
     
     private static func buildMessages(text: String, settings: AppSettings, context: AppContext) -> [[String: String]] {
-        let systemPrompt = settings.customSystemPrompt
+        var systemPrompt = settings.customSystemPrompt
             .trimmingCharacters(in: .whitespacesAndNewlines)
         
-        var userPrompt = settings.customUserPrompt
+        let builtIn = ["Plaid"]
+        let vocab = builtIn + settings.customVocabulary.filter { !builtIn.contains($0) }
+        systemPrompt += "\n\n**参考词表（优先使用这些拼写）：**\n" + vocab.joined(separator: "、")
         
+        var userPrompt = settings.customUserPrompt
         var contextParts: [String] = []
         if let appName = context.appName {
             contextParts.append("当前应用：\(appName)")
@@ -220,12 +223,6 @@ class SpeechService: ObservableObject {
             let contextBlock = "**上下文：**\n" + contextParts.joined(separator: "\n")
             userPrompt = userPrompt.replacingOccurrences(of: "{{context}}", with: contextBlock)
         }
-        
-        let builtIn = ["Plaid"]
-        let vocab = builtIn + settings.customVocabulary.filter { !builtIn.contains($0) }
-        let vocabBlock = "**参考词表（优先使用这些拼写）：**\n" + vocab.joined(separator: "、")
-        userPrompt = userPrompt.replacingOccurrences(of: "{{vocabulary}}", with: vocabBlock)
-        
         userPrompt = userPrompt.replacingOccurrences(of: "{{text}}", with: text)
         userPrompt = userPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
         

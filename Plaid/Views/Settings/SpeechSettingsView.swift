@@ -195,22 +195,25 @@ struct SpeechSettingsView: View {
                         Divider()
                             .padding(.vertical, 4)
                         
-                        VStack(alignment: .leading, spacing: 8) {
-                            promptEditor(
-                                title: "System Prompt",
-                                text: $settings.customSystemPrompt,
-                                defaultValue: AppSettings.defaultSystemPrompt,
-                                hint: "规则、示例等稳定指令（支持 prompt cache）"
-                            )
-                            
-                            promptEditor(
-                                title: "User Prompt",
-                                text: $settings.customUserPrompt,
-                                defaultValue: AppSettings.defaultUserPrompt,
-                                hint: "{{context}} = 应用上下文, {{vocabulary}} = 词表, {{text}} = 转录文本"
-                            )
-                                .foregroundStyle(.tertiary)
+                        DisclosureGroup("Prompt") {
+                            VStack(alignment: .leading, spacing: 12) {
+                                promptEditor(
+                                    title: "System Prompt",
+                                    text: $settings.customSystemPrompt,
+                                    defaultValue: AppSettings.defaultSystemPrompt,
+                                    hint: "规则、示例等稳定指令（支持 prompt cache）"
+                                )
+                                
+                                promptEditor(
+                                    title: "User Prompt",
+                                    text: $settings.customUserPrompt,
+                                    defaultValue: AppSettings.defaultUserPrompt,
+                                    hint: "{{context}} = 应用上下文, {{text}} = 转录文本"
+                                )
+                            }
+                            .padding(.top, 8)
                         }
+                        .font(.system(size: 12, weight: .medium))
                     }
                     .padding()
                 }

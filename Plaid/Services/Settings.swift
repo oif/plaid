@@ -56,7 +56,6 @@ class AppSettings: ObservableObject {
     // MARK: - User Prompt Template (dynamic per-request context)
     static let defaultUserPrompt = """
 {{context}}
-{{vocabulary}}
 请修正以下转录文本：
 {{text}}
 """
