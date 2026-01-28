@@ -102,7 +102,7 @@ class SpeechService: ObservableObject {
         
         if settings.enableLLMCorrection && !settings.effectiveLLMApiKey.isEmpty {
             let llmStart = Date()
-            let prompt = settings.customPrompt.replacingOccurrences(of: "{{text}}", with: originalText)
+            let prompt = Self.buildPrompt(settings: settings, text: originalText)
             processedText = try await llmService.process(originalText, systemPrompt: prompt)
             llmDuration = Date().timeIntervalSince(llmStart)
         }
@@ -149,7 +149,7 @@ class SpeechService: ObservableObject {
         
         if settings.enableLLMCorrection && !settings.effectiveLLMApiKey.isEmpty {
             let llmStart = Date()
-            let prompt = settings.customPrompt.replacingOccurrences(of: "{{text}}", with: originalText)
+            let prompt = Self.buildPrompt(settings: settings, text: originalText)
             processedText = try await llmService.process(originalText, systemPrompt: prompt)
             llmDuration = Date().timeIntervalSince(llmStart)
         }
@@ -174,6 +174,21 @@ class SpeechService: ObservableObject {
         isListening = false
         isProcessing = false
         waveformLevels = Array(repeating: 0.1, count: 12)
+    }
+    
+    private static func buildPrompt(settings: AppSettings, text: String) -> String {
+        var prompt = settings.customPrompt
+        
+        let vocab = settings.customVocabulary
+        if vocab.isEmpty {
+            prompt = prompt.replacingOccurrences(of: "{{vocabulary}}", with: "")
+        } else {
+            let vocabBlock = "\n**参考词表（优先使用这些拼写）：**\n" + vocab.joined(separator: "、")
+            prompt = prompt.replacingOccurrences(of: "{{vocabulary}}", with: vocabBlock)
+        }
+        
+        prompt = prompt.replacingOccurrences(of: "{{text}}", with: text)
+        return prompt
     }
     
     private func saveToHistory(_ result: TranscriptionResult) {

@@ -28,7 +28,7 @@ class AppSettings: ObservableObject {
 - 说话人的语气和意图
 
 直接输出修正后的文本，无需解释。
-
+{{vocabulary}}
 {{text}}
 """
     

@@ -221,7 +221,7 @@ struct SpeechSettingsView: View {
                                         .strokeBorder(.secondary.opacity(0.2), lineWidth: 1)
                                 )
                             
-                            Text("Use {{text}} for transcribed text")
+                            Text("Use {{text}} for transcribed text, {{vocabulary}} for custom vocabulary")
                                 .font(.system(size: 10))
                                 .foregroundStyle(.tertiary)
                         }
