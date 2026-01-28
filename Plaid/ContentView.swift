@@ -374,12 +374,12 @@ struct ContentView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     if isWide {
-                        HStack(alignment: .top, spacing: 20) {
+                        HStack(spacing: 20) {
                             HeroTimeSavedCard(
                                 timeSaved: historyService.timeSavedMinutes,
                                 formattedTime: formatTimeSaved(historyService.timeSavedMinutes)
                             )
-                            .frame(maxWidth: .infinity)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                             
                             SpeedComparisonCard(
                                 voiceWPM: historyService.voiceWPM,
@@ -387,8 +387,9 @@ struct ContentView: View {
                                 speedMultiplier: historyService.averageSpeedMultiplier,
                                 formattedSpeed: formatSpeedMultiplier(historyService.averageSpeedMultiplier)
                             )
-                            .frame(maxWidth: .infinity)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                         }
+                        .fixedSize(horizontal: false, vertical: true)
                     } else {
                         HeroTimeSavedCard(
                             timeSaved: historyService.timeSavedMinutes,
@@ -410,6 +411,7 @@ struct ContentView: View {
                             icon: "text.word.spacing",
                             accentColor: .purple
                         )
+                        .frame(maxHeight: .infinity)
                         
                         CompactStatCard(
                             title: "Today",
@@ -418,19 +420,22 @@ struct ContentView: View {
                             icon: "sun.max.fill",
                             accentColor: .orange
                         )
+                        .frame(maxHeight: .infinity)
                     }
+                    .fixedSize(horizontal: false, vertical: true)
                     
                     if isWide {
-                        HStack(alignment: .top, spacing: 16) {
+                        HStack(spacing: 16) {
                             WeeklyActivityChart(
                                 stats: historyService.weeklyStats,
                                 maxWords: historyService.maxDailyWords
                             )
-                            .frame(maxWidth: .infinity)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                             
                             AppUsageCard(stats: historyService.appUsageStats)
-                                .frame(maxWidth: .infinity)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                         }
+                        .fixedSize(horizontal: false, vertical: true)
                     } else {
                         WeeklyActivityChart(
                             stats: historyService.weeklyStats,
@@ -439,6 +444,8 @@ struct ContentView: View {
                         
                         AppUsageCard(stats: historyService.appUsageStats)
                     }
+                    
+                    PerformanceCard(stats: historyService.performanceStats)
                     
                     QuickStartCard(hotkeyParts: appState.settings.hotkeyParts)
                 }

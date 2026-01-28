@@ -26,6 +26,7 @@ final class TranscriptionRecord {
     var sttProvider: String
     var sttDuration: Double
     var llmDuration: Double?
+    var recordingDuration: Double?
     var characterCount: Int
     var appName: String?
     var bundleId: String?
@@ -36,6 +37,7 @@ final class TranscriptionRecord {
         sttProvider: String,
         sttDuration: Double,
         llmDuration: Double? = nil,
+        recordingDuration: Double? = nil,
         appName: String? = nil,
         bundleId: String? = nil
     ) {
@@ -46,6 +48,7 @@ final class TranscriptionRecord {
         self.sttProvider = sttProvider
         self.sttDuration = sttDuration
         self.llmDuration = llmDuration
+        self.recordingDuration = recordingDuration
         self.characterCount = (correctedText ?? originalText).count
         self.appName = appName
         self.bundleId = bundleId
@@ -180,6 +183,7 @@ class TranscriptionHistoryService: ObservableObject {
         sttProvider: String,
         sttDuration: Double,
         llmDuration: Double?,
+        recordingDuration: Double? = nil,
         appName: String? = nil,
         bundleId: String? = nil
     ) {
@@ -191,6 +195,7 @@ class TranscriptionHistoryService: ObservableObject {
             sttProvider: sttProvider,
             sttDuration: sttDuration,
             llmDuration: llmDuration,
+            recordingDuration: recordingDuration,
             appName: appName,
             bundleId: bundleId
         )
@@ -387,5 +392,50 @@ class TranscriptionHistoryService: ObservableObject {
             )
         }
         .sorted { $0.words > $1.words }
+    }
+    
+    // MARK: - Performance Stats
+    
+    struct PerformanceStats {
+        let avgSTTLatency: Double
+        let avgLLMLatency: Double?
+        let avgTotalLatency: Double
+        let realtimeFactor: Double?
+        let llmCorrectionRate: Double
+        let totalSessions: Int
+    }
+    
+    var performanceStats: PerformanceStats {
+        let records = recentRecords
+        guard !records.isEmpty else {
+            return PerformanceStats(
+                avgSTTLatency: 0, avgLLMLatency: nil, avgTotalLatency: 0,
+                realtimeFactor: nil, llmCorrectionRate: 0, totalSessions: 0
+            )
+        }
+        
+        let avgSTT = records.reduce(0.0) { $0 + $1.sttDuration } / Double(records.count)
+        
+        let llmRecords = records.compactMap { $0.llmDuration }
+        let avgLLM: Double? = llmRecords.isEmpty ? nil : llmRecords.reduce(0.0, +) / Double(llmRecords.count)
+        
+        let avgTotal = records.reduce(0.0) { $0 + $1.sttDuration + ($1.llmDuration ?? 0) } / Double(records.count)
+        
+        let rtfRecords = records.compactMap { r -> Double? in
+            guard let rec = r.recordingDuration, rec > 0.1 else { return nil }
+            return rec / r.sttDuration
+        }
+        let rtf: Double? = rtfRecords.isEmpty ? nil : rtfRecords.reduce(0.0, +) / Double(rtfRecords.count)
+        
+        let correctionRate = Double(llmRecords.count) / Double(records.count)
+        
+        return PerformanceStats(
+            avgSTTLatency: avgSTT,
+            avgLLMLatency: avgLLM,
+            avgTotalLatency: avgTotal,
+            realtimeFactor: rtf,
+            llmCorrectionRate: correctionRate,
+            totalSessions: records.count
+        )
     }
 }

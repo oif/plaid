@@ -500,6 +500,160 @@ struct KeyCapView: View {
     }
 }
 
+// MARK: - Performance Card
+
+struct PerformanceCard: View {
+    let stats: TranscriptionHistoryService.PerformanceStats
+    @State private var isHovered = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: PlaidSpacing.lg) {
+            HStack {
+                Text("Performance")
+                    .font(.system(size: 13, weight: .semibold))
+                Spacer()
+                if stats.totalSessions > 0 {
+                    Text("avg of \(stats.totalSessions) sessions")
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            
+            if stats.totalSessions == 0 {
+                emptyState
+            } else {
+                VStack(spacing: PlaidSpacing.md) {
+                    if let rtf = stats.realtimeFactor {
+                        metricRow(
+                            label: "Realtime Factor",
+                            value: String(format: "%.1fx", rtf),
+                            detail: "录音时长 ÷ STT 处理时长",
+                            color: rtf >= 5 ? .green : rtf >= 2 ? .orange : .red
+                        )
+                    }
+                    
+                    metricRow(
+                        label: "STT Latency",
+                        value: formatLatency(stats.avgSTTLatency),
+                        detail: "语音识别平均耗时",
+                        color: stats.avgSTTLatency < 1 ? .green : stats.avgSTTLatency < 3 ? .orange : .red
+                    )
+                    
+                    if let llm = stats.avgLLMLatency {
+                        metricRow(
+                            label: "LLM Latency",
+                            value: formatLatency(llm),
+                            detail: "LLM 修正平均耗时",
+                            color: llm < 1 ? .green : llm < 3 ? .orange : .red
+                        )
+                    }
+                    
+                    metricRow(
+                        label: "Total Latency",
+                        value: formatLatency(stats.avgTotalLatency),
+                        detail: "端到端平均延迟",
+                        color: stats.avgTotalLatency < 2 ? .green : stats.avgTotalLatency < 5 ? .orange : .red
+                    )
+                    
+                    correctionRateRow
+                }
+            }
+        }
+        .padding(PlaidSpacing.lg)
+        .background(.secondary.opacity(PlaidOpacity.subtle), in: RoundedRectangle(cornerRadius: PlaidRadius.lg))
+        .overlay(
+            RoundedRectangle(cornerRadius: PlaidRadius.lg)
+                .strokeBorder(.secondary.opacity(isHovered ? PlaidOpacity.medium : 0.08), lineWidth: 1)
+        )
+        .scaleEffect(isHovered ? PlaidHoverScale.subtle : 1.0)
+        .animation(PlaidAnimation.Spring.default, value: isHovered)
+        .onHover { hovering in
+            isHovered = hovering
+        }
+    }
+    
+    private var emptyState: some View {
+        HStack {
+            Spacer()
+            VStack(spacing: PlaidSpacing.sm) {
+                Image(systemName: "gauge.with.dots.needle.bottom.50percent")
+                    .font(.system(size: 20))
+                    .foregroundStyle(.tertiary)
+                Text("Performance data will appear here")
+                    .font(PlaidTypography.caption)
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.vertical, PlaidSpacing.lg)
+            Spacer()
+        }
+    }
+    
+    private func metricRow(label: String, value: String, detail: String, color: Color) -> some View {
+        HStack(spacing: PlaidSpacing.md) {
+            Circle()
+                .fill(color)
+                .frame(width: 6, height: 6)
+            
+            VStack(alignment: .leading, spacing: 1) {
+                Text(label)
+                    .font(.system(size: 11, weight: .medium))
+                Text(detail)
+                    .font(PlaidTypography.tiny)
+                    .foregroundStyle(.tertiary)
+            }
+            
+            Spacer()
+            
+            Text(value)
+                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(color)
+        }
+    }
+    
+    private var correctionRateRow: some View {
+        HStack(spacing: PlaidSpacing.md) {
+            Circle()
+                .fill(Color.accentColor)
+                .frame(width: 6, height: 6)
+            
+            VStack(alignment: .leading, spacing: 1) {
+                Text("LLM Correction")
+                    .font(.system(size: 11, weight: .medium))
+                Text("经过 LLM 修正的比例")
+                    .font(PlaidTypography.tiny)
+                    .foregroundStyle(.tertiary)
+            }
+            
+            Spacer()
+            
+            HStack(spacing: PlaidSpacing.sm) {
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(.secondary.opacity(PlaidOpacity.light))
+                        Capsule()
+                            .fill(Color.accentColor.opacity(0.7))
+                            .frame(width: max(0, geo.size.width * stats.llmCorrectionRate))
+                    }
+                }
+                .frame(width: 48, height: 6)
+                
+                Text("\(Int(stats.llmCorrectionRate * 100))%")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(.primary)
+            }
+        }
+    }
+    
+    private func formatLatency(_ seconds: Double) -> String {
+        if seconds < 0.01 { return "-" }
+        if seconds < 1 { return String(format: "%.0fms", seconds * 1000) }
+        return String(format: "%.2fs", seconds)
+    }
+}
+
 // MARK: - App Usage Card
 
 struct AppUsageCard: View {

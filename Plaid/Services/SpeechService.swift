@@ -6,6 +6,7 @@ struct TranscriptionResult {
     let processedText: String
     let sttDuration: Double
     let llmDuration: Double?
+    let recordingDuration: Double?
     let sttProvider: String
     let appContext: AppContext?
     
@@ -89,8 +90,8 @@ class SpeechService: ObservableObject {
         defer { isProcessing = false }
         
         let settings = AppSettings.shared
+        let recDuration = recordingStartTime.map { Date().timeIntervalSince($0) }
         
-        // Capture app context NOW, before STT processing changes focus
         let appContext = contextService.getCurrentContext()
         
         let sttStart = Date()
@@ -105,6 +106,7 @@ class SpeechService: ObservableObject {
                 processedText: "",
                 sttDuration: sttDuration,
                 llmDuration: nil,
+                recordingDuration: recDuration,
                 sttProvider: settings.sttProvider.rawValue,
                 appContext: appContext
             )
@@ -125,6 +127,7 @@ class SpeechService: ObservableObject {
             processedText: processedText,
             sttDuration: sttDuration,
             llmDuration: llmDuration,
+            recordingDuration: recDuration,
             sttProvider: settings.sttProvider.rawValue,
             appContext: appContext
         )
@@ -157,6 +160,7 @@ class SpeechService: ObservableObject {
                 processedText: "",
                 sttDuration: sttDuration,
                 llmDuration: nil,
+                recordingDuration: nil,
                 sttProvider: settings.sttProvider.rawValue,
                 appContext: appContext
             )
@@ -177,6 +181,7 @@ class SpeechService: ObservableObject {
             processedText: processedText,
             sttDuration: sttDuration,
             llmDuration: llmDuration,
+            recordingDuration: nil,
             sttProvider: settings.sttProvider.rawValue,
             appContext: appContext
         )
@@ -241,6 +246,7 @@ class SpeechService: ObservableObject {
             sttProvider: result.sttProvider,
             sttDuration: result.sttDuration,
             llmDuration: result.llmDuration,
+            recordingDuration: result.recordingDuration,
             appName: result.appContext?.appName,
             bundleId: result.appContext?.bundleId
         )
