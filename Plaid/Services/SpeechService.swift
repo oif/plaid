@@ -18,6 +18,7 @@ class SpeechService: ObservableObject {
     
     private let sttService = STTService()
     private let llmService = LLMService()
+    private let contextService = AppContextService()
     
     @Published var isListening = false
     @Published var isProcessing = false
@@ -83,6 +84,9 @@ class SpeechService: ObservableObject {
         
         let settings = AppSettings.shared
         
+        // Capture app context NOW, before STT processing changes focus
+        let appContext = contextService.getCurrentContext()
+        
         let sttStart = Date()
         let originalText = try await sttService.stopListening()
         let sttDuration = Date().timeIntervalSince(sttStart)
@@ -102,8 +106,8 @@ class SpeechService: ObservableObject {
         
         if settings.enableLLMCorrection && !settings.effectiveLLMApiKey.isEmpty {
             let llmStart = Date()
-            let prompt = Self.buildPrompt(settings: settings, text: originalText)
-            processedText = try await llmService.process(originalText, systemPrompt: prompt)
+            let systemPrompt = Self.buildSystemPrompt(settings: settings, context: appContext)
+            processedText = try await llmService.process(originalText, systemPrompt: systemPrompt)
             llmDuration = Date().timeIntervalSince(llmStart)
         }
         
@@ -129,6 +133,7 @@ class SpeechService: ObservableObject {
         defer { isProcessing = false }
         
         let settings = AppSettings.shared
+        let appContext = contextService.getCurrentContext()
         
         let sttStart = Date()
         let originalText = try await sttService.transcribeFile(at: url)
@@ -149,8 +154,8 @@ class SpeechService: ObservableObject {
         
         if settings.enableLLMCorrection && !settings.effectiveLLMApiKey.isEmpty {
             let llmStart = Date()
-            let prompt = Self.buildPrompt(settings: settings, text: originalText)
-            processedText = try await llmService.process(originalText, systemPrompt: prompt)
+            let systemPrompt = Self.buildSystemPrompt(settings: settings, context: appContext)
+            processedText = try await llmService.process(originalText, systemPrompt: systemPrompt)
             llmDuration = Date().timeIntervalSince(llmStart)
         }
         
@@ -176,9 +181,25 @@ class SpeechService: ObservableObject {
         waveformLevels = Array(repeating: 0.1, count: 12)
     }
     
-    private static func buildPrompt(settings: AppSettings, text: String) -> String {
+    private static func buildSystemPrompt(settings: AppSettings, context: AppContext) -> String {
         var prompt = settings.customPrompt
         
+        // Inject app context
+        var contextParts: [String] = []
+        if let appName = context.appName {
+            contextParts.append("当前应用：\(appName)")
+        }
+        if let element = context.focusedElement {
+            contextParts.append("输入位置：\(element)")
+        }
+        if contextParts.isEmpty {
+            prompt = prompt.replacingOccurrences(of: "{{context}}", with: "")
+        } else {
+            let contextBlock = "\n**上下文：**\n" + contextParts.joined(separator: "\n")
+            prompt = prompt.replacingOccurrences(of: "{{context}}", with: contextBlock)
+        }
+        
+        // Inject vocabulary
         let vocab = settings.customVocabulary
         if vocab.isEmpty {
             prompt = prompt.replacingOccurrences(of: "{{vocabulary}}", with: "")
@@ -187,8 +208,10 @@ class SpeechService: ObservableObject {
             prompt = prompt.replacingOccurrences(of: "{{vocabulary}}", with: vocabBlock)
         }
         
-        prompt = prompt.replacingOccurrences(of: "{{text}}", with: text)
-        return prompt
+        // Clean up legacy {{text}} placeholder for users with old custom prompts
+        prompt = prompt.replacingOccurrences(of: "{{text}}", with: "")
+        
+        return prompt.trimmingCharacters(in: .whitespacesAndNewlines)
     }
     
     private func saveToHistory(_ result: TranscriptionResult) {

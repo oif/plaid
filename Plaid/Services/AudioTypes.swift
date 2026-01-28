@@ -25,20 +25,4 @@ struct AudioMetrics: Sendable {
     static let zero = AudioMetrics(captureMs: 0, vadMs: 0, peakLevel: 0, avgLevel: 0)
 }
 
-struct VoiceContext: Sendable {
-    let appName: String?
-    let bundleId: String?
-    let documentType: String?
-    let recentText: String?
-    let vocabulary: [String]
-    
-    init(appName: String? = nil, bundleId: String? = nil, documentType: String? = nil, recentText: String? = nil, vocabulary: [String] = []) {
-        self.appName = appName
-        self.bundleId = bundleId
-        self.documentType = documentType
-        self.recentText = recentText
-        self.vocabulary = vocabulary
-    }
-    
-    static let empty = VoiceContext()
-}
+

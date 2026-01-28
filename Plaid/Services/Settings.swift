@@ -10,7 +10,7 @@ class AppSettings: ObservableObject {
     static let shared = AppSettings()
     
     static let defaultPrompt = """
-你是一个语音转文字后处理助手。请修正以下转录文本：
+你是一个语音转文字后处理助手。请修正用户发来的转录文本。
 
 **修正范围：**
 - 同音字/谐音错误（如「以经」→「已经」）
@@ -27,9 +27,16 @@ class AppSettings: ObservableObject {
 - 原有语义和表达风格
 - 说话人的语气和意图
 
+**示例：**
+输入：嗯那个我想把这个代码部署到cloudflare的workers上面然后然后用github action来自动化
+输出：我想把这个代码部署到 Cloudflare 的 Workers 上面，然后用 GitHub Action 来自动化。
+
+输入：他说这个modle的latancy太高了我们需要opitmize一下
+输出：他说这个 model 的 latency 太高了，我们需要 optimize 一下。
+
 直接输出修正后的文本，无需解释。
+{{context}}
 {{vocabulary}}
-{{text}}
 """
     
     private let defaults = UserDefaults.standard

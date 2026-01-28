@@ -56,19 +56,6 @@ class AppContextService: ObservableObject {
         )
     }
     
-    @MainActor
-    func getVoiceContext() -> VoiceContext {
-        let app = NSWorkspace.shared.frontmostApplication
-        let settings = AppSettings.shared
-        
-        return VoiceContext(
-            appName: app?.localizedName,
-            bundleId: app?.bundleIdentifier,
-            documentType: nil,
-            recentText: nil,
-            vocabulary: settings.customVocabulary
-        )
-    }
     
     func getSelectedText() -> String? {
         guard hasAccessibilityPermission else { return nil }
