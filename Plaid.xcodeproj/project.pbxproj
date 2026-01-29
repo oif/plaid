@@ -10,6 +10,7 @@
 		A10000010000000000000001 /* PlaidApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000001 /* PlaidApp.swift */; };
 		A10000010000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000002 /* ContentView.swift */; };
 		A10000010000000000000003 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000003 /* Assets.xcassets */; };
+		B5AABB010000000000000001 /* test.wav in Resources */ = {isa = PBXBuildFile; fileRef = B5AABB020000000000000001 /* test.wav */; };
 		A10000010000000000000005 /* STTService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000005 /* STTService.swift */; };
 		A10000010000000000000006 /* LLMService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000006 /* LLMService.swift */; };
 		A10000010000000000000007 /* AppContextService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000007 /* AppContextService.swift */; };
@@ -72,6 +73,7 @@
 		A20000010000000000000017 /* ModelManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelManager.swift; sourceTree = "<group>"; };
 		A20000010000000000000018 /* SherpaOnnxService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SherpaOnnxService.swift; sourceTree = "<group>"; };
 		A20000010000000000000019 /* Plaid-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Plaid-Bridging-Header.h"; sourceTree = "<group>"; };
+		B5AABB020000000000000001 /* test.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = test.wav; sourceTree = "<group>"; };
 		A20000010000000000000021 /* sherpa-onnx.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = "sherpa-onnx.xcframework"; path = "../Frameworks/sherpa-onnx.xcframework"; sourceTree = "<group>"; };
 
 		A20000010000000000000043 /* AudioInputManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioInputManager.swift; sourceTree = "<group>"; };
@@ -154,6 +156,7 @@
 				A20000010000000000000003 /* Assets.xcassets */,
 				A20000010000000000000011 /* Plaid.entitlements */,
 				A20000010000000000000012 /* Info.plist */,
+				B5AABB020000000000000001 /* test.wav */,
 			);
 			path = Plaid;
 			sourceTree = "<group>";
@@ -335,6 +338,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000010000000000000003 /* Assets.xcassets in Resources */,
+				B5AABB010000000000000001 /* test.wav in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

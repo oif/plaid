@@ -17,6 +17,20 @@ struct SpeechSettingsView: View {
     // Local state
     @State private var showModelError: String?
     
+    @State private var cloudTestState: CloudTestState = .idle
+    
+    struct CloudTestResult: Equatable {
+        let connectMs: Int
+        let processMs: Int
+    }
+    
+    enum CloudTestState: Equatable {
+        case idle
+        case testing
+        case success(CloudTestResult)
+        case failure(String)
+    }
+    
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
@@ -107,6 +121,57 @@ struct SpeechSettingsView: View {
                     Text("No local models or API keys needed. Speech recognition and text correction are handled in the cloud.")
                         .font(.system(size: 12))
                         .foregroundStyle(.secondary)
+                }
+                .padding()
+                
+                Divider()
+                    .padding(.horizontal)
+                
+                HStack {
+                    Button {
+                        Task { await testCloudConnectivity() }
+                    } label: {
+                        HStack(spacing: 6) {
+                            if cloudTestState == .testing {
+                                ProgressView()
+                                    .controlSize(.small)
+                            } else {
+                                Image(systemName: "antenna.radiowaves.left.and.right")
+                            }
+                            Text("Test Connection")
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                    .disabled(cloudTestState == .testing || settings.plaidCloudApiKey.isEmpty)
+                    
+                    Spacer()
+                    
+                    switch cloudTestState {
+                    case .idle:
+                        EmptyView()
+                    case .testing:
+                        Text("Testing…")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                    case .success(let result):
+                        HStack(spacing: 4) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                            Text("Connect \(result.connectMs)ms · Process \(result.processMs)ms")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(.green)
+                        }
+                    case .failure(let message):
+                        HStack(spacing: 4) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.red)
+                            Text(message)
+                                .font(.system(size: 12))
+                                .foregroundStyle(.red)
+                                .lineLimit(2)
+                        }
+                    }
                 }
                 .padding()
             }
@@ -285,6 +350,97 @@ struct SpeechSettingsView: View {
                 RoundedRectangle(cornerRadius: 12)
                     .strokeBorder(.secondary.opacity(0.1), lineWidth: 1)
             )
+        }
+    }
+    
+    private func testCloudConnectivity() async {
+        cloudTestState = .testing
+        
+        let endpoint = settings.effectiveSTTEndpoint
+        let apiKey = settings.plaidCloudApiKey
+        
+        guard !endpoint.isEmpty, !apiKey.isEmpty, let url = URL(string: endpoint) else {
+            cloudTestState = .failure("Invalid endpoint or missing API key")
+            return
+        }
+        
+        let base = settings.plaidCloudEndpoint.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let baseURL = URL(string: base) else {
+            cloudTestState = .failure("Invalid base URL")
+            return
+        }
+        
+        let connectMs: Int
+        do {
+            var pingReq = URLRequest(url: baseURL)
+            pingReq.httpMethod = "GET"
+            pingReq.timeoutInterval = 15
+            
+            let t0 = CFAbsoluteTimeGetCurrent()
+            let (_, pingResp) = try await NetworkSession.shared.data(for: pingReq)
+            connectMs = Int((CFAbsoluteTimeGetCurrent() - t0) * 1000)
+            
+            if let http = pingResp as? HTTPURLResponse, http.statusCode == 401 || http.statusCode == 403 {
+                cloudTestState = .failure("Auth failed (\(http.statusCode))")
+                return
+            }
+        } catch {
+            cloudTestState = .failure(describeURLError(error))
+            return
+        }
+        
+        do {
+            guard let wavURL = Bundle.main.url(forResource: "test", withExtension: "wav"),
+                  let testAudio = try? Data(contentsOf: wavURL) else {
+                cloudTestState = .failure("Test audio not found in bundle")
+                return
+            }
+            let boundary = UUID().uuidString
+            var body = Data()
+            body.append("--\(boundary)\r\nContent-Disposition: form-data; name=\"audio\"; filename=\"test.wav\"\r\nContent-Type: audio/wav\r\n\r\n".data(using: .utf8)!)
+            body.append(testAudio)
+            body.append("\r\n--\(boundary)\r\nContent-Disposition: form-data; name=\"language\"\r\n\r\nen-US\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+            
+            var req = URLRequest(url: url)
+            req.httpMethod = "POST"
+            req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+            req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+            req.timeoutInterval = 30
+            req.httpBody = body
+            
+            let t1 = CFAbsoluteTimeGetCurrent()
+            let (data, response) = try await NetworkSession.shared.data(for: req)
+            let processMs = Int((CFAbsoluteTimeGetCurrent() - t1) * 1000)
+            
+            guard let http = response as? HTTPURLResponse else {
+                cloudTestState = .failure("Invalid response")
+                return
+            }
+            
+            switch http.statusCode {
+            case 200:
+                cloudTestState = .success(CloudTestResult(connectMs: connectMs, processMs: processMs))
+            case 401, 403:
+                cloudTestState = .failure("Auth failed (\(http.statusCode))")
+            default:
+                let respBody = String(data: data, encoding: .utf8) ?? ""
+                let detail = respBody.isEmpty ? "HTTP \(http.statusCode)" : "HTTP \(http.statusCode): \(respBody.prefix(200))"
+                cloudTestState = .failure(detail)
+            }
+        } catch {
+            cloudTestState = .failure(describeURLError(error))
+        }
+    }
+    
+    private func describeURLError(_ error: Error) -> String {
+        guard let urlError = error as? URLError else { return error.localizedDescription }
+        switch urlError.code {
+        case .timedOut: return "Connection timed out"
+        case .cannotConnectToHost: return "Cannot connect to host"
+        case .notConnectedToInternet: return "No internet connection"
+        case .secureConnectionFailed: return "SSL/TLS error"
+        case .dnsLookupFailed: return "DNS lookup failed"
+        default: return urlError.localizedDescription
         }
     }
     
