@@ -14,8 +14,13 @@ permissions:
   contents: write
 
 jobs:
+  # ─── Job 1: Build & Sign ───────────────────────────────────────────
   build:
     runs-on: macos-26
+    timeout-minutes: 30
+
+    outputs:
+      version: ${{ steps.version.outputs.version }}
 
     steps:
       - name: Checkout
@@ -48,6 +53,7 @@ jobs:
           # Create temporary keychain
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
           KEYCHAIN_PASSWORD=$(openssl rand -hex 32)
+          echo "::add-mask::$KEYCHAIN_PASSWORD"
 
           security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
@@ -102,6 +108,46 @@ jobs:
             -exportPath build/export \
             -exportOptionsPlist build/ExportOptions.plist
 
+      - name: Package app for artifact
+        run: ditto -c -k --keepParent "build/export/$APP_NAME.app" build/signed-app.zip
+
+      - name: Upload app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-app
+          path: build/signed-app.zip
+          retention-days: 1
+
+      - name: Cleanup keychain
+        if: always()
+        run: |
+          if [ -f "$KEYCHAIN_PATH" ]; then
+            security delete-keychain $KEYCHAIN_PATH
+          fi
+
+  # ─── Job 2: Notarize & Package ─────────────────────────────────────
+  notarize:
+    needs: build
+    runs-on: macos-26
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            Plaid/Assets.xcassets/AppIcon.appiconset/icon_512x512@2x.png
+          sparse-checkout-cone-mode: false
+
+      - name: Download app artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: signed-app
+          path: build
+
+      - name: Extract app
+        run: ditto -x -k build/signed-app.zip build/export
+
       - name: Notarize app
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -111,12 +157,12 @@ jobs:
           # Create zip for notarization
           ditto -c -k --keepParent "build/export/$APP_NAME.app" build/$APP_NAME.zip
 
-          # Submit for notarization
+          # Submit for notarization (timeout after 15 minutes)
           xcrun notarytool submit build/$APP_NAME.zip \
             --apple-id "$APPLE_ID" \
             --password "$APPLE_ID_PASSWORD" \
             --team-id "$APPLE_TEAM_ID" \
-            --wait
+            --wait --timeout 15m
 
           # Staple the notarization ticket
           xcrun stapler staple "build/export/$APP_NAME.app"
@@ -133,13 +179,13 @@ jobs:
             --icon "$APP_NAME.app" 150 190 \
             --app-drop-link 450 190 \
             --no-internet-enable \
-            "build/$APP_NAME-${{ steps.version.outputs.version }}.dmg" \
+            "build/$APP_NAME-${{ needs.build.outputs.version }}.dmg" \
             "build/export/" || true
 
           # Fallback to simple DMG if create-dmg fails
-          if [ ! -f "build/$APP_NAME-${{ steps.version.outputs.version }}.dmg" ]; then
+          if [ ! -f "build/$APP_NAME-${{ needs.build.outputs.version }}.dmg" ]; then
             hdiutil create -volname "$APP_NAME" -srcfolder build/export -ov -format UDZO \
-              "build/$APP_NAME-${{ steps.version.outputs.version }}.dmg"
+              "build/$APP_NAME-${{ needs.build.outputs.version }}.dmg"
           fi
 
       - name: Notarize DMG
@@ -148,13 +194,33 @@ jobs:
           APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          xcrun notarytool submit "build/$APP_NAME-${{ steps.version.outputs.version }}.dmg" \
+          xcrun notarytool submit "build/$APP_NAME-${{ needs.build.outputs.version }}.dmg" \
             --apple-id "$APPLE_ID" \
             --password "$APPLE_ID_PASSWORD" \
             --team-id "$APPLE_TEAM_ID" \
-            --wait
+            --wait --timeout 15m
 
-          xcrun stapler staple "build/$APP_NAME-${{ steps.version.outputs.version }}.dmg"
+          xcrun stapler staple "build/$APP_NAME-${{ needs.build.outputs.version }}.dmg"
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: notarized-dmg
+          path: build/${{ env.APP_NAME }}-${{ needs.build.outputs.version }}.dmg
+          retention-days: 1
+
+  # ─── Job 3: Release & Distribute ───────────────────────────────────
+  release:
+    needs: [build, notarize]
+    runs-on: macos-26
+    timeout-minutes: 15
+
+    steps:
+      - name: Download DMG artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: notarized-dmg
+          path: build
 
       - name: Setup Sparkle
         run: |
@@ -168,28 +234,31 @@ jobs:
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: |
           echo "$SPARKLE_PRIVATE_KEY" > /tmp/sparkle_private_key
-          SIGNATURE=$($SPARKLE_BIN/sign_update "build/$APP_NAME-${{ steps.version.outputs.version }}.dmg" -f /tmp/sparkle_private_key)
+          SIGNATURE=$($SPARKLE_BIN/sign_update "build/$APP_NAME-${{ needs.build.outputs.version }}.dmg" -f /tmp/sparkle_private_key)
           echo "SPARKLE_SIGNATURE=$SIGNATURE" >> $GITHUB_ENV
-          rm /tmp/sparkle_private_key
+
+      - name: Cleanup Sparkle key
+        if: always()
+        run: rm -f /tmp/sparkle_private_key
 
       - name: Generate appcast item
         run: |
-          DMG_SIZE=$(stat -f%z "build/$APP_NAME-${{ steps.version.outputs.version }}.dmg")
+          DMG_SIZE=$(stat -f%z "build/$APP_NAME-${{ needs.build.outputs.version }}.dmg")
           DATE=$(date -R)
 
           cat > build/appcast_item.xml << EOF
           <item>
-            <title>Version ${{ steps.version.outputs.version }}</title>
+            <title>Version ${{ needs.build.outputs.version }}</title>
             <pubDate>$DATE</pubDate>
             <sparkle:version>${{ github.run_number }}</sparkle:version>
-            <sparkle:shortVersionString>${{ steps.version.outputs.version }}</sparkle:shortVersionString>
+            <sparkle:shortVersionString>${{ needs.build.outputs.version }}</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
             <enclosure
-              url="https://dl.plaid.oo.sb/releases/$APP_NAME-${{ steps.version.outputs.version }}.dmg"
+              url="https://dl.plaid.oo.sb/releases/$APP_NAME-${{ needs.build.outputs.version }}.dmg"
               $SPARKLE_SIGNATURE
               length="$DMG_SIZE"
               type="application/octet-stream" />
-            <sparkle:releaseNotesLink>https://github.com/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.version }}</sparkle:releaseNotesLink>
+            <sparkle:releaseNotesLink>https://github.com/${{ github.repository }}/releases/tag/v${{ needs.build.outputs.version }}</sparkle:releaseNotesLink>
           </item>
           EOF
 
@@ -197,29 +266,21 @@ jobs:
 
       - name: Upload to R2
         env:
-          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
-          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          AWS_ENDPOINT_URL: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
         run: |
-          # Install AWS CLI for S3-compatible upload
+          echo "::add-mask::$R2_BUCKET"
           brew install awscli
 
-          # Configure for R2
-          aws configure set aws_access_key_id $R2_ACCESS_KEY_ID
-          aws configure set aws_secret_access_key $R2_SECRET_ACCESS_KEY
-          aws configure set region auto
+          aws s3 cp "build/$APP_NAME-${{ needs.build.outputs.version }}.dmg" \
+            "s3://${R2_BUCKET}/releases/$APP_NAME-${{ needs.build.outputs.version }}.dmg" \
+            --endpoint-url "$AWS_ENDPOINT_URL"
 
-          R2_ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
-
-          # Upload DMG
-          aws s3 cp "build/$APP_NAME-${{ steps.version.outputs.version }}.dmg" \
-            "s3://${R2_BUCKET}/releases/$APP_NAME-${{ steps.version.outputs.version }}.dmg" \
-            --endpoint-url $R2_ENDPOINT
-
-          # Download existing appcast or create new
           aws s3 cp "s3://${R2_BUCKET}/appcast.xml" build/appcast.xml \
-            --endpoint-url $R2_ENDPOINT || cat > build/appcast.xml << 'EOF'
+            --endpoint-url "$AWS_ENDPOINT_URL" || cat > build/appcast.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
             <channel>
@@ -231,39 +292,30 @@ jobs:
           </rss>
           EOF
 
-          # Insert new item (before </channel>)
           sed -i '' '/<\/channel>/i\
           '"$(cat build/appcast_item.xml | tr '\n' '\r' | sed 's/\r/\\n/g')"'
           ' build/appcast.xml
 
-          # Upload appcast
           aws s3 cp build/appcast.xml "s3://${R2_BUCKET}/appcast.xml" \
-            --endpoint-url $R2_ENDPOINT \
+            --endpoint-url "$AWS_ENDPOINT_URL" \
             --content-type "application/xml"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          files: build/${{ env.APP_NAME }}-${{ steps.version.outputs.version }}.dmg
+          files: build/${{ env.APP_NAME }}-${{ needs.build.outputs.version }}.dmg
           generate_release_notes: true
           draft: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Cleanup keychain
-        if: always()
-        run: |
-          if [ -f "$KEYCHAIN_PATH" ]; then
-            security delete-keychain $KEYCHAIN_PATH
-          fi
-
       - name: Summary
         run: |
           echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Version**: ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ needs.build.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Build**: ${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Signed**: Developer ID Application" >> $GITHUB_STEP_SUMMARY
           echo "- **Notarized**: Yes" >> $GITHUB_STEP_SUMMARY
-          echo "- **DMG**: https://dl.plaid.oo.sb/releases/$APP_NAME-${{ steps.version.outputs.version }}.dmg" >> $GITHUB_STEP_SUMMARY
+          echo "- **DMG**: https://dl.plaid.oo.sb/releases/$APP_NAME-${{ needs.build.outputs.version }}.dmg" >> $GITHUB_STEP_SUMMARY
           echo "- **Appcast**: https://dl.plaid.oo.sb/appcast.xml" >> $GITHUB_STEP_SUMMARY
