@@ -61,9 +61,6 @@ class AppSettings: ObservableObject {
 {{text}}
 """
     
-    // Legacy: combined prompt for migration
-    static let defaultPrompt = defaultSystemPrompt + defaultUserPrompt
-    
     private let defaults = UserDefaults.standard
     
     // MARK: - STT Settings
@@ -193,8 +190,6 @@ class AppSettings: ObservableObject {
     // MARK: - Initialization
     
     private init() {
-        KeychainHelper.migrateIfNeeded()
-        
         // STT
         let provider = defaults.string(forKey: "sttProvider") ?? "apple"
         self.sttProvider = STTProvider(rawValue: provider) ?? .appleSpeech
@@ -206,14 +201,6 @@ class AppSettings: ObservableObject {
         // LLM
         self.enableLLMCorrection = defaults.object(forKey: "enableLLMCorrection") as? Bool ?? true
         
-        // Migrate from legacy single customPrompt to split system/user prompts
-        if let legacyPrompt = defaults.string(forKey: "customPrompt"),
-           defaults.string(forKey: "customSystemPrompt") == nil {
-            defaults.removeObject(forKey: "customPrompt")
-            if legacyPrompt != AppSettings.defaultPrompt && !legacyPrompt.contains("{{text}}") {
-                defaults.set(legacyPrompt, forKey: "customSystemPrompt")
-            }
-        }
         self.customSystemPrompt = defaults.string(forKey: "customSystemPrompt") ?? AppSettings.defaultSystemPrompt
         self.customUserPrompt = defaults.string(forKey: "customUserPrompt") ?? AppSettings.defaultUserPrompt
         let llmProv = defaults.string(forKey: "llmProvider") ?? "openai"
@@ -510,28 +497,4 @@ enum KeychainHelper {
         return String(data: data, encoding: .utf8)
     }
     
-    static func migrateIfNeeded() {
-        let migrated = UserDefaults.standard.bool(forKey: "keychain_migrated_v1")
-        guard !migrated else { return }
-        
-        let keys = ["custom_stt_key", "elevenlabs_key", "soniox_key", "glm_key", "openai_key", "custom_llm_key"]
-        for key in keys {
-            let legacyQuery: [String: Any] = [
-                kSecClass as String: kSecClassGenericPassword,
-                kSecAttrAccount as String: key,
-                kSecReturnData as String: true,
-                kSecMatchLimit as String: kSecMatchLimitOne
-            ]
-            var result: AnyObject?
-            if SecItemCopyMatching(legacyQuery as CFDictionary, &result) == errSecSuccess,
-               let data = result as? Data,
-               let value = String(data: data, encoding: .utf8),
-               !value.isEmpty {
-                save(key: key, value: value)
-                SecItemDelete(legacyQuery as CFDictionary)
-            }
-        }
-        
-        UserDefaults.standard.set(true, forKey: "keychain_migrated_v1")
-    }
 }
