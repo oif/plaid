@@ -8,7 +8,7 @@ on:
 env:
   APP_NAME: Plaid
   SCHEME: Plaid
-  BUNDLE_ID: com.plaid.app
+  BUNDLE_ID: com.neospaceindustries.plaid
 
 permissions:
   contents: write
@@ -16,48 +16,111 @@ permissions:
 jobs:
   build:
     runs-on: macos-15
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           lfs: true
-        
+
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: '26.2'
-          
+          xcode-version: '16.2'
+
       - name: Get version from tag
         id: version
         run: |
           VERSION=${GITHUB_REF#refs/tags/v}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Building version $VERSION"
-          
+
       - name: Update version in project
         run: |
           /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ steps.version.outputs.version }}" Plaid/Info.plist
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ github.run_number }}" Plaid/Info.plist
-          
+
+      - name: Import signing certificate
+        env:
+          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          # Create temporary keychain
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          KEYCHAIN_PASSWORD=$(openssl rand -hex 32)
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          # Import certificate
+          CERT_PATH=$RUNNER_TEMP/certificate.p12
+          echo "$APPLE_CERTIFICATE_BASE64" | base64 --decode > $CERT_PATH
+          security import $CERT_PATH -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security list-keychains -d user -s $KEYCHAIN_PATH login.keychain-db
+
+          # Store keychain path for cleanup
+          echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> $GITHUB_ENV
+          echo "KEYCHAIN_PASSWORD=$KEYCHAIN_PASSWORD" >> $GITHUB_ENV
+
       - name: Resolve packages
         run: xcodebuild -resolvePackageDependencies -scheme $SCHEME
-        
-      - name: Build
+
+      - name: Archive
         run: |
           xcodebuild archive \
             -scheme $SCHEME \
             -configuration Release \
             -archivePath build/$APP_NAME.xcarchive \
-            CODE_SIGN_IDENTITY="-" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
-            
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Developer ID Application" \
+            DEVELOPMENT_TEAM=${{ secrets.APPLE_TEAM_ID }}
+
       - name: Export app
         run: |
-          mkdir -p build/export
-          cp -R "build/$APP_NAME.xcarchive/Products/Applications/$APP_NAME.app" build/export/
-          
+          # Create export options plist
+          cat > build/ExportOptions.plist << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>developer-id</string>
+            <key>teamID</key>
+            <string>${{ secrets.APPLE_TEAM_ID }}</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>signingCertificate</key>
+            <string>Developer ID Application</string>
+          </dict>
+          </plist>
+          EOF
+
+          xcodebuild -exportArchive \
+            -archivePath build/$APP_NAME.xcarchive \
+            -exportPath build/export \
+            -exportOptionsPlist build/ExportOptions.plist
+
+      - name: Notarize app
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          # Create zip for notarization
+          ditto -c -k --keepParent "build/export/$APP_NAME.app" build/$APP_NAME.zip
+
+          # Submit for notarization
+          xcrun notarytool submit build/$APP_NAME.zip \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_ID_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+
+          # Staple the notarization ticket
+          xcrun stapler staple "build/export/$APP_NAME.app"
+
       - name: Create DMG
         run: |
           brew install create-dmg
@@ -72,20 +135,34 @@ jobs:
             --no-internet-enable \
             "build/$APP_NAME-${{ steps.version.outputs.version }}.dmg" \
             "build/export/" || true
-          
+
           # Fallback to simple DMG if create-dmg fails
           if [ ! -f "build/$APP_NAME-${{ steps.version.outputs.version }}.dmg" ]; then
             hdiutil create -volname "$APP_NAME" -srcfolder build/export -ov -format UDZO \
               "build/$APP_NAME-${{ steps.version.outputs.version }}.dmg"
           fi
-          
+
+      - name: Notarize DMG
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          xcrun notarytool submit "build/$APP_NAME-${{ steps.version.outputs.version }}.dmg" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_ID_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+
+          xcrun stapler staple "build/$APP_NAME-${{ steps.version.outputs.version }}.dmg"
+
       - name: Setup Sparkle
         run: |
           curl -L -o /tmp/Sparkle.tar.xz https://github.com/sparkle-project/Sparkle/releases/download/2.8.1/Sparkle-2.8.1.tar.xz
           mkdir -p /tmp/Sparkle
           tar -xf /tmp/Sparkle.tar.xz -C /tmp/Sparkle
           echo "SPARKLE_BIN=/tmp/Sparkle/bin" >> $GITHUB_ENV
-          
+
       - name: Sign update with Sparkle
         env:
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
@@ -94,12 +171,12 @@ jobs:
           SIGNATURE=$($SPARKLE_BIN/sign_update "build/$APP_NAME-${{ steps.version.outputs.version }}.dmg" -f /tmp/sparkle_private_key)
           echo "SPARKLE_SIGNATURE=$SIGNATURE" >> $GITHUB_ENV
           rm /tmp/sparkle_private_key
-          
+
       - name: Generate appcast item
         run: |
           DMG_SIZE=$(stat -f%z "build/$APP_NAME-${{ steps.version.outputs.version }}.dmg")
           DATE=$(date -R)
-          
+
           cat > build/appcast_item.xml << EOF
           <item>
             <title>Version ${{ steps.version.outputs.version }}</title>
@@ -115,9 +192,9 @@ jobs:
             <sparkle:releaseNotesLink>https://github.com/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.version }}</sparkle:releaseNotesLink>
           </item>
           EOF
-          
+
           cat build/appcast_item.xml
-          
+
       - name: Upload to R2
         env:
           R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
@@ -127,19 +204,19 @@ jobs:
         run: |
           # Install AWS CLI for S3-compatible upload
           brew install awscli
-          
+
           # Configure for R2
           aws configure set aws_access_key_id $R2_ACCESS_KEY_ID
           aws configure set aws_secret_access_key $R2_SECRET_ACCESS_KEY
           aws configure set region auto
-          
+
           R2_ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
-          
+
           # Upload DMG
           aws s3 cp "build/$APP_NAME-${{ steps.version.outputs.version }}.dmg" \
             "s3://${R2_BUCKET}/releases/$APP_NAME-${{ steps.version.outputs.version }}.dmg" \
             --endpoint-url $R2_ENDPOINT
-            
+
           # Download existing appcast or create new
           aws s3 cp "s3://${R2_BUCKET}/appcast.xml" build/appcast.xml \
             --endpoint-url $R2_ENDPOINT || cat > build/appcast.xml << 'EOF'
@@ -153,17 +230,17 @@ jobs:
             </channel>
           </rss>
           EOF
-          
+
           # Insert new item (before </channel>)
           sed -i '' '/<\/channel>/i\
           '"$(cat build/appcast_item.xml | tr '\n' '\r' | sed 's/\r/\\n/g')"'
           ' build/appcast.xml
-          
+
           # Upload appcast
           aws s3 cp build/appcast.xml "s3://${R2_BUCKET}/appcast.xml" \
             --endpoint-url $R2_ENDPOINT \
             --content-type "application/xml"
-            
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
@@ -172,12 +249,21 @@ jobs:
           draft: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
+
+      - name: Cleanup keychain
+        if: always()
+        run: |
+          if [ -f "$KEYCHAIN_PATH" ]; then
+            security delete-keychain $KEYCHAIN_PATH
+          fi
+
       - name: Summary
         run: |
           echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Version**: ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Build**: ${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Signed**: Developer ID Application" >> $GITHUB_STEP_SUMMARY
+          echo "- **Notarized**: Yes" >> $GITHUB_STEP_SUMMARY
           echo "- **DMG**: https://dl.plaid.oo.sb/releases/$APP_NAME-${{ steps.version.outputs.version }}.dmg" >> $GITHUB_STEP_SUMMARY
           echo "- **Appcast**: https://dl.plaid.oo.sb/appcast.xml" >> $GITHUB_STEP_SUMMARY

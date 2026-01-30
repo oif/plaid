@@ -44,16 +44,6 @@ Plaid 是一款 macOS 语音转文字应用，让你的语音比打字更快地�
 
 从 [Releases](https://github.com/oif/plaid/releases) 页面下载最新版本。
 
-### 重要：临时信任设置
-
-> **注意：** Apple Developer Program 续费正在进行中。在新证书签发之前，首次启动需要手动信任应用：
->
-> 1. 打开下载的 `.dmg`，将 Plaid 拖入应用程序文件夹
-> 2. 右键点击 Plaid.app，选择「打开」
-> 3. 在安全提示中点击「打开」
->
-> 这只是临时措施，再等几天。Developer Program 续费完成后，后续版本将正常签名和公证。
-
 ### 权限要求
 
 Plaid 需要以下权限：
@@ -78,7 +68,6 @@ Plaid 需要以下权限：
 ## 路线图
 
 ### 进行中
-- [ ] Apple Developer Program 续费 & 正式代码签名
 
 ### 短期重点
 

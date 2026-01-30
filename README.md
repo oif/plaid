@@ -44,16 +44,6 @@ Plaid is a macOS voice-to-text app that turns your speech into text faster than 
 
 Download the latest release from the [Releases](https://github.com/oif/plaid/releases) page.
 
-### Important: Temporary Trust Requirement
-
-> **Note:** Apple Developer Program renewal is currently in progress. Until the new certificate is issued, you'll need to manually trust the app on first launch:
->
-> 1. Open the downloaded `.dmg` and drag Plaid to Applications
-> 2. Right-click (or Control-click) on Plaid.app and select "Open"
-> 3. Click "Open" in the security dialog
->
-> This will only be necessary for a few more days. Once the Developer Program renewal completes, future releases will be properly signed and notarized.
-
 ### Permissions
 
 Plaid requires the following permissions:
@@ -78,7 +68,6 @@ For offline usage, download a local model in Settings → Speech → Local Model
 ## Roadmap
 
 ### In Progress
-- [ ] Apple Developer Program renewal & proper code signing
 
 ### Short-term Focus
 
