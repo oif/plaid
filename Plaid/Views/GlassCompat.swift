@@ -12,6 +12,7 @@ struct GlassContainer<Content: View>: View {
     }
     
     var body: some View {
+        #if compiler(>=6.2)
         if #available(macOS 26.0, *) {
             GlassEffectContainer(spacing: spacing) {
                 content
@@ -21,6 +22,11 @@ struct GlassContainer<Content: View>: View {
                 content
             }
         }
+        #else
+        VStack(spacing: spacing) {
+            content
+        }
+        #endif
     }
 }
 
@@ -29,29 +35,41 @@ struct GlassContainer<Content: View>: View {
 extension View {
     @ViewBuilder
     func glassBackground() -> some View {
+        #if compiler(>=6.2)
         if #available(macOS 26.0, *) {
             self.glassEffect(.regular, in: .rect(cornerRadius: 12))
         } else {
             self.background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
         }
+        #else
+        self.background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+        #endif
     }
     
     @ViewBuilder
     func glassBackground(in shape: some InsettableShape) -> some View {
+        #if compiler(>=6.2)
         if #available(macOS 26.0, *) {
             self.glassEffect(.regular, in: shape)
         } else {
             self.background(.regularMaterial, in: shape)
         }
+        #else
+        self.background(.regularMaterial, in: shape)
+        #endif
     }
     
     @ViewBuilder
     func glassID(_ id: String, in namespace: Namespace.ID) -> some View {
+        #if compiler(>=6.2)
         if #available(macOS 26.0, *) {
             self.glassEffectID(id, in: namespace)
         } else {
             self
         }
+        #else
+        self
+        #endif
     }
 }
 
@@ -60,6 +78,7 @@ extension View {
 extension View {
     @ViewBuilder
     func glassCard() -> some View {
+        #if compiler(>=6.2)
         if #available(macOS 26.0, *) {
             self.glassEffect(.regular, in: .rect(cornerRadius: 14))
         } else {
@@ -70,19 +89,32 @@ extension View {
                         .strokeBorder(.secondary.opacity(0.1), lineWidth: 1)
                 )
         }
+        #else
+        self
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .strokeBorder(.secondary.opacity(0.1), lineWidth: 1)
+            )
+        #endif
     }
     
     @ViewBuilder
     func glassPill() -> some View {
+        #if compiler(>=6.2)
         if #available(macOS 26.0, *) {
             self.glassEffect(.regular, in: Capsule())
         } else {
             self.background(.regularMaterial, in: Capsule())
         }
+        #else
+        self.background(.regularMaterial, in: Capsule())
+        #endif
     }
     
     @ViewBuilder
     func glassInteractive(isHovered: Bool = false) -> some View {
+        #if compiler(>=6.2)
         if #available(macOS 26.0, *) {
             self
                 .glassEffect(
@@ -96,6 +128,13 @@ extension View {
                     in: RoundedRectangle(cornerRadius: 12)
                 )
         }
+        #else
+        self
+            .background(
+                isHovered ? Color.primary.opacity(0.08) : Color.secondary.opacity(0.06),
+                in: RoundedRectangle(cornerRadius: 12)
+            )
+        #endif
     }
 }
 
@@ -105,6 +144,7 @@ struct GlassButtonStyle: ButtonStyle {
     var isProminent: Bool = false
     
     func makeBody(configuration: Configuration) -> some View {
+        #if compiler(>=6.2)
         if #available(macOS 26.0, *) {
             if isProminent {
                 AnyView(
@@ -135,6 +175,17 @@ struct GlassButtonStyle: ButtonStyle {
                 )
                 .opacity(configuration.isPressed ? 0.8 : 1)
         }
+        #else
+        configuration.label
+            .padding(isProminent ? 12 : 8)
+            .background(
+                configuration.isPressed 
+                    ? Color.primary.opacity(0.15) 
+                    : Color.primary.opacity(0.05),
+                in: RoundedRectangle(cornerRadius: 8)
+            )
+            .opacity(configuration.isPressed ? 0.8 : 1)
+        #endif
     }
 }
 
