@@ -65,6 +65,7 @@ class STTService: ObservableObject {
     private var audioEngine: AVAudioEngine?
     
     private var tempFileURL: URL?
+    private var recordingFile: AVAudioFile?
     
     var currentTranscription = ""
     var onPartialResult: ((String) -> Void)?
@@ -117,6 +118,7 @@ class STTService: ObservableObject {
             audioEngine?.inputNode.removeTap(onBus: 0)
         }
         audioEngine = nil
+        recordingFile = nil
         
         recognitionRequest?.endAudio()
         recognitionRequest = nil
@@ -217,6 +219,7 @@ class STTService: ObservableObject {
         ]
         
         let audioFile = try AVAudioFile(forWriting: fileURL, settings: settings)
+        recordingFile = audioFile
         
         let outputFormat = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 16000, channels: 1, interleaved: false)!
         guard let converter = AVAudioConverter(from: inputFormat, to: outputFormat) else {
@@ -278,6 +281,7 @@ class STTService: ObservableObject {
         if audioEngine?.inputNode.numberOfInputs ?? 0 > 0 {
             audioEngine?.inputNode.removeTap(onBus: 0)
         }
+        recordingFile = nil
         
         recognitionRequest?.endAudio()
         
@@ -312,7 +316,7 @@ class STTService: ObservableObject {
         
         let result: STTResult
         
-        logger.info("Transcribing with provider: \(settings.sttProvider.rawValue)")
+        logger.info("Transcribing with provider: \(settings.sttProvider.rawValue, privacy: .public)")
         
         switch settings.sttProvider {
         case .appleSpeech:
@@ -332,7 +336,7 @@ class STTService: ObservableObject {
             result = try await transcribeWithPlaidCloud(context: context)
         }
         
-        logger.info("Transcription result: text='\(result.text.prefix(100))' (length=\(result.text.count))")
+        logger.info("Transcription result: length=\(result.text.count, privacy: .public), text='\(result.text.prefix(100), privacy: .public)'")
         
         audioEngine = nil
         recognitionRequest = nil

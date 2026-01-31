@@ -30,7 +30,9 @@ struct RecordDetailView: View {
             VStack(alignment: .leading, spacing: 24) {
                 headerSection
                 
-                if let corrected = record.correctedText, corrected != record.originalText {
+                if record.isFailed {
+                    errorSection
+                } else if let corrected = record.correctedText, corrected != record.originalText {
                     textSection(
                         title: "Enhanced",
                         text: corrected,
@@ -55,7 +57,9 @@ struct RecordDetailView: View {
                     )
                 }
                 
-                performanceSection
+                if !record.isFailed {
+                    performanceSection
+                }
             }
             .padding(28)
         }
@@ -63,12 +67,14 @@ struct RecordDetailView: View {
         .background(Color(nsColor: .windowBackgroundColor))
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
-                Button {
-                    copyToClipboard(record.displayText)
-                } label: {
-                    Label("Copy", systemImage: "doc.on.doc")
+                if !record.isFailed {
+                    Button {
+                        copyToClipboard(record.displayText)
+                    } label: {
+                        Label("Copy", systemImage: "doc.on.doc")
+                    }
+                    .keyboardShortcut("c", modifiers: [.command, .shift])
                 }
-                .keyboardShortcut("c", modifiers: [.command, .shift])
             }
         }
     }
@@ -132,6 +138,60 @@ struct RecordDetailView: View {
             }
         }
         .padding(.bottom, 4)
+    }
+    
+    // MARK: - Error Section
+    
+    private var errorSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.red)
+                
+                Text("Transcription Failed")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.primary)
+                
+                Spacer()
+            }
+            
+            Text(record.errorMessage ?? "Unknown error")
+                .font(.system(size: 14))
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
+                .lineSpacing(4)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            
+            HStack(spacing: 16) {
+                HStack(spacing: 4) {
+                    Image(systemName: providerIcon)
+                        .font(.system(size: 10))
+                    Text(providerDisplayName)
+                        .font(.system(size: 11))
+                }
+                .foregroundStyle(.secondary)
+                
+                if let recDur = record.recordingDuration, recDur > 0 {
+                    HStack(spacing: 4) {
+                        Image(systemName: "mic")
+                            .font(.system(size: 10))
+                        Text(String(format: "%.1fs recorded", recDur))
+                            .font(.system(size: 11))
+                    }
+                    .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .padding(16)
+        .background {
+            RoundedRectangle(cornerRadius: 14)
+                .fill(.red.opacity(0.06))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .strokeBorder(.red.opacity(0.12), lineWidth: 1)
+                )
+        }
     }
     
     // MARK: - Text Section

@@ -30,6 +30,7 @@ final class TranscriptionRecord {
     var characterCount: Int
     var appName: String?
     var bundleId: String?
+    var errorMessage: String?
     
     init(
         originalText: String,
@@ -39,7 +40,8 @@ final class TranscriptionRecord {
         llmDuration: Double? = nil,
         recordingDuration: Double? = nil,
         appName: String? = nil,
-        bundleId: String? = nil
+        bundleId: String? = nil,
+        errorMessage: String? = nil
     ) {
         self.id = UUID()
         self.timestamp = Date()
@@ -52,6 +54,11 @@ final class TranscriptionRecord {
         self.characterCount = (correctedText ?? originalText).count
         self.appName = appName
         self.bundleId = bundleId
+        self.errorMessage = errorMessage
+    }
+    
+    var isFailed: Bool {
+        errorMessage != nil
     }
     
     var displayText: String {
@@ -210,6 +217,35 @@ class TranscriptionHistoryService: ObservableObject {
             loadRecentRecords()
         } catch {
             print("Failed to save record: \(error)")
+        }
+    }
+    
+    func addErrorRecord(
+        errorMessage: String,
+        sttProvider: String,
+        recordingDuration: Double? = nil,
+        appName: String? = nil,
+        bundleId: String? = nil
+    ) {
+        guard let context = modelContext else { return }
+        
+        let record = TranscriptionRecord(
+            originalText: "",
+            sttProvider: sttProvider,
+            sttDuration: 0,
+            recordingDuration: recordingDuration,
+            appName: appName,
+            bundleId: bundleId,
+            errorMessage: errorMessage
+        )
+        
+        context.insert(record)
+        
+        do {
+            try context.save()
+            loadRecentRecords()
+        } catch {
+            print("Failed to save error record: \(error)")
         }
     }
     

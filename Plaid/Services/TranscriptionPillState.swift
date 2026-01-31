@@ -126,6 +126,7 @@ class TranscriptionPillState: ObservableObject {
             return
         }
         
+        let recDuration = recordingDuration
         isRecording = false
         isProcessing = true
         stopDurationTimer()
@@ -138,13 +139,34 @@ class TranscriptionPillState: ObservableObject {
                     onComplete?(result.finalText)
                 } else {
                     logger.warning("complete: transcription returned empty text")
+                    saveErrorRecord(
+                        error: "No speech detected",
+                        recordingDuration: recDuration
+                    )
                     showError("No speech detected")
                 }
             } catch {
-                logger.error("complete: stopListening failed: \(error.localizedDescription)")
+                let errorDesc = error.localizedDescription
+                logger.error("complete: stopListening failed: \(errorDesc, privacy: .public)")
+                saveErrorRecord(
+                    error: errorDesc,
+                    recordingDuration: recDuration
+                )
                 showError(friendlyError(error))
             }
         }
+    }
+    
+    private func saveErrorRecord(error: String, recordingDuration: TimeInterval) {
+        let settings = AppSettings.shared
+        let context = AppContextService().getCurrentContext()
+        TranscriptionHistoryService.shared.addErrorRecord(
+            errorMessage: error,
+            sttProvider: settings.sttProvider.rawValue,
+            recordingDuration: recordingDuration,
+            appName: context.appName,
+            bundleId: context.bundleId
+        )
     }
     
     func cancel() {

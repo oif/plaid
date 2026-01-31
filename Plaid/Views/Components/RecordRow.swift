@@ -9,10 +9,22 @@ struct RecordRow: View {
             appIconView
             
             VStack(alignment: .leading, spacing: 6) {
-                Text(record.displayText)
-                    .lineLimit(2)
-                    .font(.system(size: 13))
-                    .foregroundStyle(.primary.opacity(isHovered ? 1 : 0.9))
+                if record.isFailed {
+                    HStack(spacing: 5) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.red.opacity(0.8))
+                        Text(record.errorMessage ?? "Unknown error")
+                            .lineLimit(2)
+                            .font(.system(size: 13))
+                            .foregroundStyle(.red.opacity(isHovered ? 0.9 : 0.7))
+                    }
+                } else {
+                    Text(record.displayText)
+                        .lineLimit(2)
+                        .font(.system(size: 13))
+                        .foregroundStyle(.primary.opacity(isHovered ? 1 : 0.9))
+                }
                 
                 HStack(spacing: 6) {
                     HStack(spacing: 4) {
@@ -23,17 +35,40 @@ struct RecordRow: View {
                     }
                     .foregroundStyle(.secondary)
                     
-                    Text("·")
-                        .foregroundStyle(.quaternary)
-                        .font(.system(size: 8))
+                    if let recDur = record.recordingDuration, recDur > 0 {
+                        Text("·")
+                            .foregroundStyle(.quaternary)
+                            .font(.system(size: 8))
+                        
+                        Text(String(format: "%.0fs", recDur))
+                            .font(.system(size: 10, design: .rounded))
+                            .foregroundStyle(.secondary)
+                    }
                     
-                    Text(record.formattedDuration)
-                        .font(.system(size: 10, design: .rounded))
-                        .foregroundStyle(.secondary)
+                    if !record.isFailed {
+                        Text("·")
+                            .foregroundStyle(.quaternary)
+                            .font(.system(size: 8))
+                        
+                        Text(record.formattedDuration)
+                            .font(.system(size: 10, design: .rounded))
+                            .foregroundStyle(.secondary)
+                    }
                     
                     Spacer()
                     
-                    if record.correctedText != nil {
+                    if record.isFailed {
+                        HStack(spacing: 3) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 9))
+                            Text("Failed")
+                                .font(.system(size: 9, weight: .medium))
+                        }
+                        .foregroundStyle(.red.opacity(0.7))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(.red.opacity(0.08), in: Capsule())
+                    } else if record.correctedText != nil {
                         HStack(spacing: 3) {
                             Image(systemName: "sparkles")
                                 .font(.system(size: 9))

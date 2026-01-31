@@ -101,7 +101,7 @@ class SpeechService: ObservableObject {
         let sttResult = try await sttService.stopListening(context: appContext)
         let wallDuration = Date().timeIntervalSince(sttStart)
         
-        logger.info("STT completed in \(String(format: "%.2f", wallDuration))s, text length=\(sttResult.text.count)")
+        logger.info("STT completed in \(String(format: "%.2f", wallDuration), privacy: .public)s, text length=\(sttResult.text.count, privacy: .public)")
         
         let result = try await buildTranscriptionResult(
             sttResult: sttResult,
@@ -177,7 +177,7 @@ class SpeechService: ObservableObject {
         let sttDuration = wallDuration
         
         guard Self.hasSubstantiveContent(originalText) else {
-            logger.warning("No substantive content in STT result: '\(originalText)'")
+            logger.warning("No substantive content in STT result: '\(originalText, privacy: .public)'")
             return TranscriptionResult(
                 originalText: originalText,
                 processedText: "",
