@@ -41,10 +41,63 @@ struct TranscriptionPillView: View {
     }
     
     private var processingContent: some View {
-        Text("Thinking...")
-            .font(.system(size: 13, weight: .medium))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 14)
+        HStack(spacing: 8) {
+            thinkingBarsView
+            
+            Text("Thinking")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.white)
+        }
+        .padding(.horizontal, 14)
+    }
+    
+    // MARK: - Bar Loader
+    
+    private static let barDelays: [Double] = [0.0, 0.10, 0.20]
+    private static let waveDuration: Double = 0.6
+    private static let hueCycleDuration: Double = 6.5
+    private static let barHeight: CGFloat = 12
+    private static let barWidth: CGFloat = 3.5
+    private static let barSpacing: CGFloat = 2
+    
+    private var thinkingBarsView: some View {
+        TimelineView(.animation) { timeline in
+            let time = timeline.date.timeIntervalSinceReferenceDate
+            let hue = (time / Self.hueCycleDuration).truncatingRemainder(dividingBy: 1.0)
+            
+            let opacities = Self.barDelays.map { delay in
+                barOpacity(time: time, delay: delay)
+            }
+            let avgOpacity = opacities.reduce(0, +) / Double(opacities.count)
+            
+            ZStack {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(Color(hue: hue, saturation: 0.4, brightness: 1.0))
+                    .frame(width: 16, height: 16)
+                    .blur(radius: 6)
+                    .opacity(avgOpacity * 0.6)
+                
+                HStack(spacing: Self.barSpacing) {
+                    ForEach(0..<3, id: \.self) { index in
+                        let opacity = opacities[index]
+                        let brightness = 0.3 + opacity * 0.7
+                        let widthScale = 0.5 + opacity * 0.5
+                        
+                        RoundedRectangle(cornerRadius: 1)
+                            .fill(Color(hue: hue, saturation: 0.35, brightness: brightness))
+                            .frame(width: Self.barWidth * widthScale, height: Self.barHeight)
+                            .opacity(opacity)
+                    }
+                }
+            }
+        }
+    }
+    
+    private func barOpacity(time: Double, delay: Double) -> Double {
+        let phase = ((time - delay) / Self.waveDuration) * 2 * .pi
+        let raw = (sin(phase) + 1) / 2
+        let minOpacity = 0.15
+        return minOpacity + raw * (1.0 - minOpacity)
     }
     
     private var durationText: String {

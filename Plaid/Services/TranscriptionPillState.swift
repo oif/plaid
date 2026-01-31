@@ -133,12 +133,16 @@ class TranscriptionPillState: ObservableObject {
         Task {
             do {
                 let result = try await SpeechService.shared.stopListening()
-                hide()
                 if !result.finalText.isEmpty {
+                    hide()
                     onComplete?(result.finalText)
+                } else {
+                    logger.warning("complete: transcription returned empty text")
+                    showError("No speech detected")
                 }
             } catch {
-                hide()
+                logger.error("complete: stopListening failed: \(error.localizedDescription)")
+                showError(friendlyError(error))
             }
         }
     }

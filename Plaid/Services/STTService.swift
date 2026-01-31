@@ -2,6 +2,9 @@ import Foundation
 import Speech
 import AVFoundation
 import Accelerate
+import os.log
+
+private let logger = Logger(subsystem: "com.neospaceindustries.plaid", category: "STT")
 
 // MARK: - STT Result
 
@@ -283,6 +286,7 @@ class STTService: ObservableObject {
             if SileroVADService.shared.isModelAvailable {
                 let hasSpeech = SileroVADService.shared.containsSpeech(fileURL: fileURL)
                 if !hasSpeech {
+                    logger.warning("VAD: No speech detected in recording, returning empty result")
                     try? FileManager.default.removeItem(at: fileURL)
                     tempFileURL = nil
                     audioEngine = nil
@@ -290,17 +294,25 @@ class STTService: ObservableObject {
                     recognitionTask = nil
                     return .plain("")
                 }
+                logger.info("VAD: Speech detected, proceeding to transcription")
+            } else {
+                logger.info("VAD: Model not available, skipping speech detection")
             }
             
             if settings.enableDenoising && SpeechDenoiserService.shared.isModelAvailable {
                 if let denoisedURL = try? SpeechDenoiserService.shared.denoise(fileURL: fileURL) {
+                    logger.info("Denoising: Applied successfully")
                     try? FileManager.default.removeItem(at: fileURL)
                     tempFileURL = denoisedURL
+                } else {
+                    logger.warning("Denoising: Failed, using original audio")
                 }
             }
         }
         
         let result: STTResult
+        
+        logger.info("Transcribing with provider: \(settings.sttProvider.rawValue)")
         
         switch settings.sttProvider {
         case .appleSpeech:
@@ -319,6 +331,8 @@ class STTService: ObservableObject {
         case .plaidCloud:
             result = try await transcribeWithPlaidCloud(context: context)
         }
+        
+        logger.info("Transcription result: text='\(result.text.prefix(100))' (length=\(result.text.count))")
         
         audioEngine = nil
         recognitionRequest = nil

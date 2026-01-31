@@ -1,5 +1,8 @@
 import Foundation
 import Combine
+import os.log
+
+private let logger = Logger(subsystem: "com.neospaceindustries.plaid", category: "Speech")
 
 struct TranscriptionResult {
     let originalText: String
@@ -98,6 +101,8 @@ class SpeechService: ObservableObject {
         let sttResult = try await sttService.stopListening(context: appContext)
         let wallDuration = Date().timeIntervalSince(sttStart)
         
+        logger.info("STT completed in \(String(format: "%.2f", wallDuration))s, text length=\(sttResult.text.count)")
+        
         let result = try await buildTranscriptionResult(
             sttResult: sttResult,
             wallDuration: wallDuration,
@@ -172,6 +177,7 @@ class SpeechService: ObservableObject {
         let sttDuration = wallDuration
         
         guard Self.hasSubstantiveContent(originalText) else {
+            logger.warning("No substantive content in STT result: '\(originalText)'")
             return TranscriptionResult(
                 originalText: originalText,
                 processedText: "",
