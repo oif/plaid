@@ -15,7 +15,7 @@ struct TranscriptionPillView: View {
                 recordingContent
             }
         }
-        .frame(width: 120, height: 40)
+        .frame(width: 120, height: 36)
         .background {
             Capsule()
                 .fill(.black)

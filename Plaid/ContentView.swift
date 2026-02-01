@@ -44,7 +44,7 @@ struct ContentView: View {
                 settingsSidebar
             }
         }
-        .frame(minWidth: 280)
+        .navigationSplitViewColumnWidth(min: 240, ideal: 240)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 if appState.selectedMainTab == .home {

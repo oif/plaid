@@ -257,7 +257,7 @@ struct RecordDetailView: View {
                     performanceRow(
                         icon: "bolt.fill",
                         label: "Plaid Cloud",
-                        value: "STT + LLM",
+                        value: "Transcription",
                         timing: record.formattedDuration,
                         color: .blue
                     )
