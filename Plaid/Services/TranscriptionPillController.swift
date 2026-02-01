@@ -78,30 +78,15 @@ class TranscriptionPillController {
         self.panel = panel
     }
     
-    func toggle() {
-        logger.info("toggle: isShowing=\(self.isShowing)")
-        if isShowing {
-            pillState.toggle()
-        } else {
-            show()
-        }
-    }
-    
-    private var isHoldMode = false
-    
-    func show() {
-        guard !isShowing else {
-            logger.debug("show: already showing")
-            return
-        }
+    func startRecording() {
+        guard !isShowing else { return }
         guard let panel = panel else {
-            logger.error("show: panel is nil")
+            logger.error("startRecording: panel is nil")
             return
         }
         
         let screen = activeScreen()
         isShowing = true
-        
         pillState.show()
         
         let screenFrame = screen.visibleFrame
@@ -111,18 +96,11 @@ class TranscriptionPillController {
         
         panel.setFrameOrigin(NSPoint(x: x, y: y))
         panel.orderFrontRegardless()
-        logger.info("show: pill visible at (\(x), \(y))")
+        logger.info("startRecording: pill visible at (\(x), \(y))")
     }
     
-    func holdStart() {
-        guard !isShowing else { return }
-        isHoldMode = true
-        show()
-    }
-    
-    func holdEnd() {
-        guard isHoldMode, isShowing else { return }
-        isHoldMode = false
+    func stopRecording() {
+        guard isShowing else { return }
         pillState.complete()
     }
     

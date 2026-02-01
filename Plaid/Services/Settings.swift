@@ -166,27 +166,6 @@ class AppSettings: ObservableObject {
     
     // MARK: - Hotkey Settings
     
-    @Published var hotkeyKeyCode: Int {
-        didSet { 
-            defaults.set(hotkeyKeyCode, forKey: "hotkeyKeyCode")
-            NotificationCenter.default.post(name: .hotkeyDidChange, object: nil)
-        }
-    }
-    
-    @Published var hotkeyModifiers: Int {
-        didSet { 
-            defaults.set(hotkeyModifiers, forKey: "hotkeyModifiers")
-            NotificationCenter.default.post(name: .hotkeyDidChange, object: nil)
-        }
-    }
-    
-    @Published var hotkeyUseFn: Bool {
-        didSet { 
-            defaults.set(hotkeyUseFn, forKey: "hotkeyUseFn")
-            NotificationCenter.default.post(name: .hotkeyDidChange, object: nil)
-        }
-    }
-    
     @Published var holdKeyCode: Int {
         didSet {
             defaults.set(holdKeyCode, forKey: "holdKeyCode")
@@ -234,10 +213,6 @@ class AppSettings: ObservableObject {
         self.enableDenoising = defaults.object(forKey: "enableDenoising") as? Bool ?? true
         self.customVocabulary = defaults.stringArray(forKey: "customVocabulary") ?? []
         
-        let spaceKeyCode = 49
-        self.hotkeyKeyCode = defaults.object(forKey: "hotkeyKeyCode") as? Int ?? spaceKeyCode
-        self.hotkeyModifiers = defaults.object(forKey: "hotkeyModifiers") as? Int ?? 0
-        self.hotkeyUseFn = defaults.object(forKey: "hotkeyUseFn") as? Bool ?? true
         let fnKeyCode = 63
         self.holdKeyCode = defaults.object(forKey: "holdKeyCode") as? Int ?? fnKeyCode
         self.holdModifiers = defaults.object(forKey: "holdModifiers") as? Int ?? 0
@@ -246,19 +221,18 @@ class AppSettings: ObservableObject {
     
     // MARK: - Hotkey Display
     
-    /// Returns the individual key parts for display (e.g. ["fn", "Space"] or ["⌘", "⇧", "R"])
+    private static let modifierKeyNames: [Int: String] = [
+        63: "fn", 58: "⌥", 61: "⌥", 59: "⌃", 62: "⌃",
+        55: "⌘", 54: "⌘", 56: "⇧", 60: "⇧",
+    ]
+    
     var hotkeyParts: [String] {
-        var parts: [String] = []
-        if hotkeyUseFn { parts.append("fn") }
-        if hotkeyModifiers & (1 << 3) != 0 { parts.append("⌃") }
-        if hotkeyModifiers & (1 << 2) != 0 { parts.append("⌥") }
-        if hotkeyModifiers & (1 << 1) != 0 { parts.append("⇧") }
-        if hotkeyModifiers & (1 << 0) != 0 { parts.append("⌘") }
-        parts.append(Self.keyName(for: hotkeyKeyCode))
-        return parts
+        if let name = Self.modifierKeyNames[holdKeyCode] {
+            return [name]
+        }
+        return [Self.keyName(for: holdKeyCode)]
     }
     
-    /// Human-readable hotkey string (e.g. "fn Space", "⌘ ⇧ R")
     var hotkeyDisplayString: String {
         hotkeyParts.joined(separator: " ")
     }

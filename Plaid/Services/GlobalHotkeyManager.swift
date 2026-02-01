@@ -3,15 +3,20 @@ import Carbon
 import OSLog
 import ApplicationServices
 
-private var _lastTriggerTime: UInt64 = 0
-private var _hotkeyKeyCode: Int64 = 49
-private var _hotkeyModifiers: CGEventFlags = []
-private var _hotkeyUseFn: Bool = true
-private var _holdKeyCode: Int64 = 63
-private var _holdModifiers: CGEventFlags = []
-private var _holdUseFn: Bool = false
-private var _holdActive: Bool = false
-private var _holdDebounceWorkItem: DispatchWorkItem?
+// MARK: - Gesture State Machine (file-level for CGEvent tap callback)
+
+private enum GestureState {
+    case idle
+    case holdPending
+    case waitSecondTap
+    case holdActive
+    case toggleRecording
+    case toggleStopping
+}
+
+private var _gestureState: GestureState = .idle
+private var _gestureTimer: DispatchWorkItem?
+private var _gestureKeyCode: Int64 = 63
 
 private let _modifierKeyFlags: [Int64: CGEventFlags] = [
     63: .maskSecondaryFn,
@@ -21,11 +26,11 @@ private let _modifierKeyFlags: [Int64: CGEventFlags] = [
     56: .maskShift, 60: .maskShift,
 ]
 
+private let _gestureThresholdMs = 300
+
 @MainActor
 class GlobalHotkeyManager {
     static let shared = GlobalHotkeyManager()
-    
-    private let minIntervalNanoseconds: UInt64 = 300_000_000
     
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
@@ -34,62 +39,29 @@ class GlobalHotkeyManager {
     private var retryCount = 0
     private let maxRetries = 10
     
-    var onHotkeyPressed: (() -> Void)?
-    var onFnHoldStart: (() -> Void)?
-    var onFnHoldEnd: (() -> Void)?
+    var onHoldStart: (() -> Void)?
+    var onHoldEnd: (() -> Void)?
+    var onToggleStart: (() -> Void)?
+    var onToggleStop: (() -> Void)?
     
     private init() {
-        loadHotkeySettings()
+        loadSettings()
         NotificationCenter.default.addObserver(
             forName: .hotkeyDidChange,
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.loadHotkeySettings()
-            Logger.hotkey.info("Hotkey settings changed - keyCode: \(_hotkeyKeyCode), useFn: \(_hotkeyUseFn)")
+            self?.loadSettings()
+            Logger.hotkey.info("Gesture key changed to keyCode: \(_gestureKeyCode)")
         }
     }
     
-    private func loadHotkeySettings() {
-        let settings = AppSettings.shared
-        _hotkeyKeyCode = Int64(settings.hotkeyKeyCode)
-        _hotkeyUseFn = settings.hotkeyUseFn
-        
-        var flags: CGEventFlags = []
-        let mods = settings.hotkeyModifiers
-        if mods & (1 << 0) != 0 { flags.insert(.maskCommand) }
-        if mods & (1 << 1) != 0 { flags.insert(.maskShift) }
-        if mods & (1 << 2) != 0 { flags.insert(.maskAlternate) }
-        if mods & (1 << 3) != 0 { flags.insert(.maskControl) }
-        _hotkeyModifiers = flags
-        
-        _holdKeyCode = Int64(settings.holdKeyCode)
-        _holdUseFn = settings.holdUseFn
-        var holdFlags: CGEventFlags = []
-        let hMods = settings.holdModifiers
-        if hMods & (1 << 0) != 0 { holdFlags.insert(.maskCommand) }
-        if hMods & (1 << 1) != 0 { holdFlags.insert(.maskShift) }
-        if hMods & (1 << 2) != 0 { holdFlags.insert(.maskAlternate) }
-        if hMods & (1 << 3) != 0 { holdFlags.insert(.maskControl) }
-        _holdModifiers = holdFlags
-    }
-    
-    nonisolated static func shouldTrigger() -> Bool {
-        let now = mach_absolute_time()
-        var timebase = mach_timebase_info_data_t()
-        mach_timebase_info(&timebase)
-        let nowNs = now * UInt64(timebase.numer) / UInt64(timebase.denom)
-        
-        if nowNs - _lastTriggerTime < 300_000_000 {
-            return false
-        }
-        _lastTriggerTime = nowNs
-        return true
+    private func loadSettings() {
+        _gestureKeyCode = Int64(AppSettings.shared.holdKeyCode)
     }
     
     // MARK: - Permission Check
     
-    /// Check if accessibility permission is granted
     private func hasAccessibilityPermission() -> Bool {
         let trusted = AXIsProcessTrustedWithOptions([
             kAXTrustedCheckOptionPrompt.takeUnretainedValue(): false
@@ -97,14 +69,12 @@ class GlobalHotkeyManager {
         return trusted
     }
     
-    /// Check system fn key setting for potential conflicts
     private func checkFnKeyConflict() -> Bool {
-        guard _hotkeyUseFn else { return false }
+        guard _gestureKeyCode == 63 else { return false }
         
         if let fnUsageType = UserDefaults.standard.persistentDomain(forName: "com.apple.HIToolbox")?["AppleFnUsageType"] as? Int {
-            // 3 = Start Dictation, which conflicts with fn+key shortcuts
             if fnUsageType == 3 {
-                Logger.hotkey.warning("System fn key is set to 'Start Dictation' - this may conflict with fn+Space hotkey")
+                Logger.hotkey.warning("System fn key is set to 'Start Dictation' - this may conflict with gesture key")
                 return true
             }
         }
@@ -121,7 +91,6 @@ class GlobalHotkeyManager {
         
         Logger.hotkey.info("Starting global hotkey manager")
         
-        // Check accessibility permission first
         guard hasAccessibilityPermission() else {
             Logger.hotkey.error("Cannot start event tap: Accessibility permission not granted")
             Task { @MainActor in
@@ -131,9 +100,8 @@ class GlobalHotkeyManager {
             return
         }
         
-        // Check for fn key conflict
         if checkFnKeyConflict() {
-            Logger.hotkey.warning("Potential fn key conflict detected - hotkey may not work as expected")
+            Logger.hotkey.warning("Potential fn key conflict detected")
         }
         
         isStarted = true
@@ -147,16 +115,12 @@ class GlobalHotkeyManager {
             guard let refcon = refcon else { return Unmanaged.passRetained(event) }
             let manager = Unmanaged<GlobalHotkeyManager>.fromOpaque(refcon).takeUnretainedValue()
             
-            // CRITICAL: Handle tap being disabled by system
             if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
-                let reason = type == .tapDisabledByTimeout ? "timeout" : "user input"
-                // Can't use Logger here (not async-safe), but we re-enable immediately
                 if let tap = manager.eventTap {
                     CGEvent.tapEnable(tap: tap, enable: true)
                 }
-                // Schedule status update on main thread
                 DispatchQueue.main.async {
-                    Logger.hotkey.warning("Event tap was disabled by \(reason), re-enabled")
+                    Logger.hotkey.warning("Event tap re-enabled after \(type == .tapDisabledByTimeout ? "timeout" : "user input")")
                     Task { @MainActor in
                         DiagnosticsManager.shared.updateEventTapStatus(.active)
                     }
@@ -165,79 +129,175 @@ class GlobalHotkeyManager {
             }
             
             let isRepeat = event.getIntegerValueField(.keyboardEventAutorepeat) == 1
-            if isRepeat {
-                return Unmanaged.passRetained(event)
-            }
+            if isRepeat { return Unmanaged.passRetained(event) }
             
             let eventKeyCode = event.getIntegerValueField(.keyboardEventKeycode)
+            let isModifierGesture = _modifierKeyFlags[_gestureKeyCode] != nil
             
-            if let holdFlag = _modifierKeyFlags[_holdKeyCode] {
-                if type == .flagsChanged && eventKeyCode == _holdKeyCode {
-                    let isPressed = event.flags.contains(holdFlag)
-                    _holdDebounceWorkItem?.cancel()
-                    let workItem = DispatchWorkItem {
-                        if isPressed && !_holdActive {
-                            _holdActive = true
-                            DispatchQueue.main.async {
-                                Logger.hotkey.info("Hold started (modifier key \(_holdKeyCode))")
-                                manager.onFnHoldStart?()
-                            }
-                        } else if !isPressed && _holdActive {
-                            _holdActive = false
-                            DispatchQueue.main.async {
-                                Logger.hotkey.info("Hold ended (modifier key \(_holdKeyCode))")
-                                manager.onFnHoldEnd?()
-                            }
-                        }
-                    }
-                    _holdDebounceWorkItem = workItem
-                    DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(75), execute: workItem)
+            if isModifierGesture {
+                guard let gestureFlag = _modifierKeyFlags[_gestureKeyCode] else {
                     return Unmanaged.passRetained(event)
                 }
-            } else {
-                let matchesHoldKey = eventKeyCode == _holdKeyCode
-                let matchesHoldFn = !_holdUseFn || event.flags.contains(.maskSecondaryFn)
-                let matchesHoldMods = _holdModifiers.isEmpty || event.flags.contains(_holdModifiers)
-                let isHoldKey = matchesHoldKey && matchesHoldFn && matchesHoldMods
                 
-                if type == .keyDown && isHoldKey && !_holdActive {
-                    _holdActive = true
-                    DispatchQueue.main.async {
-                        Logger.hotkey.info("Hold started (key \(_holdKeyCode))")
-                        manager.onFnHoldStart?()
+                if type == .flagsChanged && eventKeyCode == _gestureKeyCode {
+                    let isPressed = event.flags.contains(gestureFlag)
+                    
+                    switch _gestureState {
+                    case .idle:
+                        if isPressed {
+                            _gestureState = .holdPending
+                            _gestureTimer?.cancel()
+                            let timer = DispatchWorkItem {
+                                guard _gestureState == .holdPending else { return }
+                                _gestureState = .holdActive
+                                DispatchQueue.main.async {
+                                    Logger.hotkey.info("Hold started")
+                                    manager.onHoldStart?()
+                                }
+                            }
+                            _gestureTimer = timer
+                            DispatchQueue.global().asyncAfter(
+                                deadline: .now() + .milliseconds(_gestureThresholdMs),
+                                execute: timer
+                            )
+                        }
+                        
+                    case .holdPending:
+                        if !isPressed {
+                            _gestureTimer?.cancel()
+                            _gestureState = .waitSecondTap
+                            let timer = DispatchWorkItem {
+                                guard _gestureState == .waitSecondTap else { return }
+                                _gestureState = .idle
+                            }
+                            _gestureTimer = timer
+                            DispatchQueue.global().asyncAfter(
+                                deadline: .now() + .milliseconds(_gestureThresholdMs),
+                                execute: timer
+                            )
+                        }
+                        
+                    case .waitSecondTap:
+                        if isPressed {
+                            _gestureTimer?.cancel()
+                            _gestureState = .toggleRecording
+                            DispatchQueue.main.async {
+                                Logger.hotkey.info("Double-tap → toggle start")
+                                manager.onToggleStart?()
+                            }
+                        }
+                        
+                    case .holdActive:
+                        if !isPressed {
+                            _gestureState = .idle
+                            DispatchQueue.main.async {
+                                Logger.hotkey.info("Hold ended")
+                                manager.onHoldEnd?()
+                            }
+                        }
+                        
+                    case .toggleRecording:
+                        if isPressed {
+                            _gestureState = .toggleStopping
+                            DispatchQueue.main.async {
+                                Logger.hotkey.info("Single-tap → toggle stop")
+                                manager.onToggleStop?()
+                            }
+                        }
+                        
+                    case .toggleStopping:
+                        if !isPressed {
+                            _gestureState = .idle
+                        }
                     }
-                    return nil
-                } else if type == .keyUp && eventKeyCode == _holdKeyCode && _holdActive {
-                    _holdActive = false
-                    DispatchQueue.main.async {
-                        Logger.hotkey.info("Hold ended (key \(_holdKeyCode))")
-                        manager.onFnHoldEnd?()
+                    
+                    return Unmanaged.passRetained(event)
+                }
+                
+                if type == .keyDown && (_gestureState == .holdPending || _gestureState == .waitSecondTap) {
+                    _gestureTimer?.cancel()
+                    _gestureState = .idle
+                }
+                
+            } else {
+                let isGestureKey = eventKeyCode == _gestureKeyCode
+                
+                if isGestureKey {
+                    switch _gestureState {
+                    case .idle:
+                        if type == .keyDown {
+                            _gestureState = .holdPending
+                            _gestureTimer?.cancel()
+                            let timer = DispatchWorkItem {
+                                guard _gestureState == .holdPending else { return }
+                                _gestureState = .holdActive
+                                DispatchQueue.main.async {
+                                    Logger.hotkey.info("Hold started")
+                                    manager.onHoldStart?()
+                                }
+                            }
+                            _gestureTimer = timer
+                            DispatchQueue.global().asyncAfter(
+                                deadline: .now() + .milliseconds(_gestureThresholdMs),
+                                execute: timer
+                            )
+                            return nil
+                        }
+                        
+                    case .holdPending:
+                        if type == .keyUp {
+                            _gestureTimer?.cancel()
+                            _gestureState = .waitSecondTap
+                            let timer = DispatchWorkItem {
+                                guard _gestureState == .waitSecondTap else { return }
+                                _gestureState = .idle
+                            }
+                            _gestureTimer = timer
+                            DispatchQueue.global().asyncAfter(
+                                deadline: .now() + .milliseconds(_gestureThresholdMs),
+                                execute: timer
+                            )
+                            return nil
+                        }
+                        
+                    case .waitSecondTap:
+                        if type == .keyDown {
+                            _gestureTimer?.cancel()
+                            _gestureState = .toggleRecording
+                            DispatchQueue.main.async {
+                                Logger.hotkey.info("Double-tap → toggle start")
+                                manager.onToggleStart?()
+                            }
+                            return nil
+                        }
+                        
+                    case .holdActive:
+                        if type == .keyUp {
+                            _gestureState = .idle
+                            DispatchQueue.main.async {
+                                Logger.hotkey.info("Hold ended")
+                                manager.onHoldEnd?()
+                            }
+                            return nil
+                        }
+                        
+                    case .toggleRecording:
+                        if type == .keyDown {
+                            _gestureState = .toggleStopping
+                            DispatchQueue.main.async {
+                                Logger.hotkey.info("Single-tap → toggle stop")
+                                manager.onToggleStop?()
+                            }
+                            return nil
+                        }
+                        
+                    case .toggleStopping:
+                        if type == .keyUp {
+                            _gestureState = .idle
+                            return nil
+                        }
                     }
-                    return nil
                 }
-            }
-            
-            if _holdActive {
-                return Unmanaged.passRetained(event)
-            }
-            
-            let matchesKey = eventKeyCode == _hotkeyKeyCode
-            let matchesFn = !_hotkeyUseFn || event.flags.contains(.maskSecondaryFn)
-            let matchesMods = _hotkeyModifiers.isEmpty || event.flags.contains(_hotkeyModifiers)
-            let isHotkey = matchesKey && matchesFn && matchesMods
-            
-            if type == .keyDown && isHotkey {
-                guard GlobalHotkeyManager.shouldTrigger() else {
-                    DispatchQueue.main.async {
-                        Logger.hotkey.debug("Hotkey debounced (too fast)")
-                    }
-                    return nil
-                }
-                DispatchQueue.main.async {
-                    Logger.hotkey.info("Hotkey triggered, callback=\(manager.onHotkeyPressed != nil)")
-                    manager.onHotkeyPressed?()
-                }
-                return nil
             }
             
             return Unmanaged.passRetained(event)
@@ -285,7 +345,6 @@ class GlobalHotkeyManager {
                 DiagnosticsManager.shared.updateEventTapStatus(.active)
             }
             
-            // Stop retry timer on success
             retryTimer?.invalidate()
             retryTimer = nil
             retryCount = 0
@@ -300,7 +359,7 @@ class GlobalHotkeyManager {
             return
         }
         
-        let interval = min(Double(retryCount + 1) * 2.0, 10.0) // Exponential backoff, max 10s
+        let interval = min(Double(retryCount + 1) * 2.0, 10.0)
         Logger.hotkey.info("Will retry event tap creation in \(interval)s (attempt \(self.retryCount + 1)/\(self.maxRetries))")
         
         retryTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { [weak self] _ in
@@ -339,7 +398,6 @@ class GlobalHotkeyManager {
         }
     }
     
-    /// Force restart the event tap (useful after permission changes)
     func restart() {
         Logger.hotkey.info("Restarting global hotkey manager")
         stop()
@@ -349,11 +407,10 @@ class GlobalHotkeyManager {
     
     // MARK: - Diagnostics
     
-    /// Get current status for diagnostics
     var diagnosticStatus: String {
         var status = "Event Tap: \(isStarted ? "started" : "stopped")"
         status += "\nAccessibility: \(hasAccessibilityPermission() ? "granted" : "denied")"
-        status += "\nHotkey: keyCode=\(_hotkeyKeyCode), useFn=\(_hotkeyUseFn)"
+        status += "\nGesture Key: keyCode=\(_gestureKeyCode)"
         if checkFnKeyConflict() {
             status += "\n⚠️ System fn key conflict detected"
         }

@@ -46,7 +46,7 @@ struct VocabularySettingsView: View {
         VStack(alignment: .leading, spacing: PlaidSpacing.sm) {
             Text("Custom Vocabulary")
                 .font(PlaidTypography.sectionTitle)
-            Text("词表中的术语会注入到 LLM 修正提示词中，确保拼写一致。")
+            Text("Terms in this list are injected into the LLM correction prompt to ensure consistent spelling.")
                 .font(PlaidTypography.bodySecondary)
                 .foregroundStyle(.secondary)
         }
