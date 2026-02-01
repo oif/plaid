@@ -20,7 +20,7 @@
 
 ---
 
-Plaid is a macOS voice-to-text app. Press a hotkey, speak, and the transcribed text is typed into whatever app you're using. Local AI models, cloud APIs, and LLM post-correction work together to make speech faster and more accurate than typing.
+Plaid is a macOS app that turns your voice into actions. Right now it's a fast, accurate voice-to-text tool — press a hotkey, speak, and text appears in whatever app you're using. The goal is to become the voice interface between you and your computer.
 
 ## Highlights
 
