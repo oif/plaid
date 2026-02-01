@@ -49,17 +49,6 @@ Plaid 支持三类语音转文字引擎：
 - **云服务** — 接入第三方 API，如 OpenAI Whisper、ElevenLabs、Soniox、GLM，或任何 OpenAI 兼容接口。
 - **Plaid Cloud** — STT 和 LLM 纠错在一次往返中完成，无需单独配置 LLM API Key。
 
-## LLM 纠错
-
-启用后，STT 的原始输出会发送给 LLM（OpenAI 或任何 OpenAI 兼容接口）进行后处理纠错：
-
-- 修正中文语音识别中常见的同音字错误
-- 纠正品牌名和技术术语（如 `cloudflare` → `Cloudflare`）
-- 补全标点符号、清理填充词和口误重启
-- 识别说话人的自我纠正（"不对，应该是..."）
-
-系统 Prompt 和用户 Prompt 可在 **设置 → Speech** 中完全自定义。
-
 ## 隐私
 
 - **本地引擎** 完全在设备端运行 — 音频和文本不会离开你的 Mac。

@@ -49,17 +49,6 @@ Plaid supports three categories of speech-to-text engines:
 - **Cloud services** — connect to third-party APIs like OpenAI Whisper, ElevenLabs, Soniox, GLM, or any OpenAI-compatible endpoint.
 - **Plaid Cloud** — STT and LLM correction in a single round-trip, no separate LLM API key needed.
 
-## LLM Correction
-
-When enabled, the raw STT output is sent to an LLM (OpenAI or any OpenAI-compatible endpoint) for post-correction:
-
-- Fixes homophone errors common in Chinese speech recognition
-- Corrects brand names and technical terms (e.g. `cloudflare` → `Cloudflare`)
-- Adds proper punctuation, removes filler words and false starts
-- Respects self-corrections ("不对，应该是...")
-
-The system prompt and user prompt are fully customizable in **Settings → Speech**.
-
 ## Privacy
 
 - **On-device engines** run entirely locally — no audio or text leaves your Mac.
