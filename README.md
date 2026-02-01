@@ -1,11 +1,17 @@
-# Plaid
-
 <p align="center">
-  <img src="icon2_zoomed.png" width="128" alt="Plaid Icon">
+  <img src="icon2_zoomed.png" width="128" alt="Plaid">
 </p>
+
+<h1 align="center">Plaid</h1>
 
 <p align="center">
   <em>Expand your brain bandwidth.</em>
+</p>
+
+<p align="center">
+  <a href="https://github.com/oif/plaid/releases"><img src="https://img.shields.io/github/v/release/oif/plaid?style=flat-square" alt="Release"></a>
+  <a href="https://github.com/oif/plaid/blob/main/LICENSE"><img src="https://img.shields.io/github/license/oif/plaid?style=flat-square" alt="License"></a>
+  <img src="https://img.shields.io/badge/platform-macOS%2014%2B-blue?style=flat-square" alt="Platform">
 </p>
 
 <p align="center">
@@ -14,76 +20,51 @@
 
 ---
 
-Plaid is a macOS voice-to-text app that turns your speech into text faster than you can type. With local AI models, cloud APIs, and smart LLM correction, it seamlessly injects transcribed text into any application.
+Plaid is a macOS voice-to-text app. Press a hotkey, speak, and the transcribed text is typed into whatever app you're using. Local AI models, cloud APIs, and LLM post-correction work together to make speech faster and more accurate than typing.
 
-## Features
+## Highlights
 
-**Speech Recognition**
-- Local models via sherpa-onnx (SenseVoice, Whisper) - fully offline
-- Apple Speech - system built-in
-- Cloud APIs - Whisper API, ElevenLabs, Soniox, GLM, or custom endpoints
+- **Flexible STT** — on-device models (SenseVoice, Whisper), Apple Speech, third-party cloud services, or Plaid Cloud — pick what fits your workflow
+- **LLM post-correction** — fixes homophones, adds punctuation, cleans filler words, corrects brand names and technical terms
+- **Context-aware** — sends the active app name, window title, and app category to the LLM so it can disambiguate domain-specific vocabulary
+- **Custom vocabulary** — define your own terms so the corrector always gets them right
+- **Audio preprocessing** — VAD skips silent recordings; optional noise suppression cleans up before transcription
+- **Auto text injection** — transcribed text is typed directly into the active app via Accessibility API
+- **Global hotkey** — toggle or hold-to-record, configurable key combo
+- **Floating pill UI** — minimal, always-on-top recording indicator
 
-**Smart Processing**
-- LLM post-correction for grammar and punctuation
-- Custom prompts for domain-specific formatting
-- Context-aware text enhancement
+## Quick Start
 
-**Seamless Integration**
-- Global hotkey - trigger from anywhere
-- Floating pill UI - minimal, always-on-top indicator
-- Auto text injection - directly into active app
+Download the latest `.dmg` from the [Releases](https://github.com/oif/plaid/releases) page, drag **Plaid.app** into `/Applications`, and launch. macOS will ask for **Microphone** and **Accessibility** permissions — both are required.
 
-**Privacy First**
-- Local models run entirely on-device
-- No data leaves your Mac
+1. Open **Plaid** → it sits in the menu bar
+2. Go to **Settings → Speech** and pick an STT provider
+3. Press the hotkey (default: `fn Space`) → speak → release → text appears in the active app
 
-## Installation
+## Speech Recognition
 
-### Download
+Plaid supports three categories of speech-to-text engines:
 
-Download the latest release from the [Releases](https://github.com/oif/plaid/releases) page.
+- **On-device** — SenseVoice and Whisper models run locally via sherpa-onnx, plus Apple's built-in speech recognition. Fully offline, no data leaves your Mac. Models can be downloaded in **Settings → Speech**.
+- **Cloud services** — connect to third-party APIs like OpenAI Whisper, ElevenLabs, Soniox, GLM, or any OpenAI-compatible endpoint.
+- **Plaid Cloud** — STT and LLM correction in a single round-trip, no separate LLM API key needed.
 
-### Permissions
+## LLM Correction
 
-Plaid requires the following permissions:
-- **Microphone** - For voice recording
-- **Accessibility** - For global hotkey and text injection
+When enabled, the raw STT output is sent to an LLM (OpenAI or any OpenAI-compatible endpoint) for post-correction:
 
-## Usage
+- Fixes homophone errors common in Chinese speech recognition
+- Corrects brand names and technical terms (e.g. `cloudflare` → `Cloudflare`)
+- Adds proper punctuation, removes filler words and false starts
+- Respects self-corrections ("不对，应该是...")
 
-1. **Set up STT Provider** - Choose your preferred speech-to-text provider in Settings → Speech
-2. **Configure Hotkey** - Set your preferred trigger key in Settings → General
-3. **Start Recording** - Press the hotkey or click the menu bar icon
-4. **Speak** - Your voice will be transcribed in real-time
-5. **Release** - The transcribed text will be automatically typed into the active app
+The system prompt and user prompt are fully customizable in **Settings → Speech**.
 
-### Local Models
+## Privacy
 
-For offline usage, download a local model in Settings → Speech → Local Model:
-- **SenseVoice INT8** (228 MB) - Recommended for Chinese, English, Japanese, Korean
-- **SenseVoice FP32** (900 MB) - Higher accuracy, more resource intensive
-- **Whisper Tiny/Base/Small** - Multilingual support (99 languages)
-
-## Roadmap
-
-### In Progress
-
-### Short-term Focus
-
-**Performance**
-- [ ] Reduce memory footprint for local models
-- [ ] Improve cold start time
-- [ ] Optimize audio pipeline latency
-
-**Recognition Accuracy**
-- [ ] Hot words / custom vocabulary support
-- [ ] Better accent and noise handling
-- [ ] Context-aware recognition hints
-
-**Computer Use Integration**
-- [ ] Tighter integration with Claude computer use
-- [ ] App-aware context injection
-- [ ] Streamlined voice-to-action workflows
+- **On-device engines** run entirely locally — no audio or text leaves your Mac.
+- **Cloud engines** send audio to external servers. Choose local models if privacy is a priority.
+- API keys are stored in macOS Keychain.
 
 ## Building from Source
 
@@ -93,13 +74,14 @@ cd plaid
 open Plaid.xcodeproj
 ```
 
-Build with Xcode 15+ targeting macOS 14.0+.
-
-## License
-
-MIT License - see [LICENSE](LICENSE) for details.
+Build with **Xcode 15+** targeting **macOS 14.0+**. Local models are downloaded at runtime, not bundled in the repo.
 
 ## Acknowledgments
 
-- [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) - Local speech recognition engine (runs SenseVoice & Whisper ONNX models)
-- [SenseVoice](https://github.com/FunAudioLLM/SenseVoice) - Alibaba's multilingual speech model
+- [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) — on-device speech recognition engine
+- [SenseVoice](https://github.com/FunAudioLLM/SenseVoice) — multilingual speech model by Alibaba
+- [Silero VAD](https://github.com/snakers4/silero-vad) — voice activity detection
+
+## License
+
+[MIT](LICENSE)
