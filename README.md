@@ -5,8 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>Your voice, your interface.</strong><br>
-  <em>Expanding human-computer interaction bandwidth.</em>
+  <em>Expand your brain bandwidth.</em>
 </p>
 
 <p align="center">

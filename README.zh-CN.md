@@ -5,8 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>你的声音，你的界面。</strong><br>
-  <em>拓宽人机交互带宽。</em>
+  <em>拓展你的大脑带宽。</em>
 </p>
 
 <p align="center">

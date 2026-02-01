@@ -23,14 +23,9 @@ struct AboutSettingsView: View {
                         .foregroundStyle(.secondary)
                 }
                 
-                Text("Your voice, your interface.")
+                Text("Expand your brain bandwidth.")
                     .font(.headline)
                     .foregroundStyle(.secondary)
-                
-                Text("Expanding human-computer interaction bandwidth.")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .multilineTextAlignment(.center)
                 
                 GlassContainer(spacing: 16) {
                     VStack(alignment: .leading, spacing: 12) {
