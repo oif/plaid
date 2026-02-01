@@ -7,6 +7,19 @@ private var _lastTriggerTime: UInt64 = 0
 private var _hotkeyKeyCode: Int64 = 49
 private var _hotkeyModifiers: CGEventFlags = []
 private var _hotkeyUseFn: Bool = true
+private var _holdKeyCode: Int64 = 63
+private var _holdModifiers: CGEventFlags = []
+private var _holdUseFn: Bool = false
+private var _holdActive: Bool = false
+private var _holdDebounceWorkItem: DispatchWorkItem?
+
+private let _modifierKeyFlags: [Int64: CGEventFlags] = [
+    63: .maskSecondaryFn,
+    58: .maskAlternate, 61: .maskAlternate,
+    59: .maskControl, 62: .maskControl,
+    55: .maskCommand, 54: .maskCommand,
+    56: .maskShift, 60: .maskShift,
+]
 
 @MainActor
 class GlobalHotkeyManager {
@@ -22,6 +35,8 @@ class GlobalHotkeyManager {
     private let maxRetries = 10
     
     var onHotkeyPressed: (() -> Void)?
+    var onFnHoldStart: (() -> Void)?
+    var onFnHoldEnd: (() -> Void)?
     
     private init() {
         loadHotkeySettings()
@@ -47,6 +62,16 @@ class GlobalHotkeyManager {
         if mods & (1 << 2) != 0 { flags.insert(.maskAlternate) }
         if mods & (1 << 3) != 0 { flags.insert(.maskControl) }
         _hotkeyModifiers = flags
+        
+        _holdKeyCode = Int64(settings.holdKeyCode)
+        _holdUseFn = settings.holdUseFn
+        var holdFlags: CGEventFlags = []
+        let hMods = settings.holdModifiers
+        if hMods & (1 << 0) != 0 { holdFlags.insert(.maskCommand) }
+        if hMods & (1 << 1) != 0 { holdFlags.insert(.maskShift) }
+        if hMods & (1 << 2) != 0 { holdFlags.insert(.maskAlternate) }
+        if hMods & (1 << 3) != 0 { holdFlags.insert(.maskControl) }
+        _holdModifiers = holdFlags
     }
     
     nonisolated static func shouldTrigger() -> Bool {
@@ -116,7 +141,7 @@ class GlobalHotkeyManager {
     }
     
     private func createEventTap() {
-        let eventMask = (1 << CGEventType.keyDown.rawValue) | (1 << CGEventType.flagsChanged.rawValue)
+        let eventMask = (1 << CGEventType.keyDown.rawValue) | (1 << CGEventType.keyUp.rawValue) | (1 << CGEventType.flagsChanged.rawValue)
         
         let callback: CGEventTapCallBack = { proxy, type, event, refcon in
             guard let refcon = refcon else { return Unmanaged.passRetained(event) }
@@ -144,8 +169,59 @@ class GlobalHotkeyManager {
                 return Unmanaged.passRetained(event)
             }
             
-            let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
-            let matchesKey = keyCode == _hotkeyKeyCode
+            let eventKeyCode = event.getIntegerValueField(.keyboardEventKeycode)
+            
+            if let holdFlag = _modifierKeyFlags[_holdKeyCode] {
+                if type == .flagsChanged && eventKeyCode == _holdKeyCode {
+                    let isPressed = event.flags.contains(holdFlag)
+                    _holdDebounceWorkItem?.cancel()
+                    let workItem = DispatchWorkItem {
+                        if isPressed && !_holdActive {
+                            _holdActive = true
+                            DispatchQueue.main.async {
+                                Logger.hotkey.info("Hold started (modifier key \(_holdKeyCode))")
+                                manager.onFnHoldStart?()
+                            }
+                        } else if !isPressed && _holdActive {
+                            _holdActive = false
+                            DispatchQueue.main.async {
+                                Logger.hotkey.info("Hold ended (modifier key \(_holdKeyCode))")
+                                manager.onFnHoldEnd?()
+                            }
+                        }
+                    }
+                    _holdDebounceWorkItem = workItem
+                    DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(75), execute: workItem)
+                    return Unmanaged.passRetained(event)
+                }
+            } else {
+                let matchesHoldKey = eventKeyCode == _holdKeyCode
+                let matchesHoldFn = !_holdUseFn || event.flags.contains(.maskSecondaryFn)
+                let matchesHoldMods = _holdModifiers.isEmpty || event.flags.contains(_holdModifiers)
+                let isHoldKey = matchesHoldKey && matchesHoldFn && matchesHoldMods
+                
+                if type == .keyDown && isHoldKey && !_holdActive {
+                    _holdActive = true
+                    DispatchQueue.main.async {
+                        Logger.hotkey.info("Hold started (key \(_holdKeyCode))")
+                        manager.onFnHoldStart?()
+                    }
+                    return nil
+                } else if type == .keyUp && eventKeyCode == _holdKeyCode && _holdActive {
+                    _holdActive = false
+                    DispatchQueue.main.async {
+                        Logger.hotkey.info("Hold ended (key \(_holdKeyCode))")
+                        manager.onFnHoldEnd?()
+                    }
+                    return nil
+                }
+            }
+            
+            if _holdActive {
+                return Unmanaged.passRetained(event)
+            }
+            
+            let matchesKey = eventKeyCode == _hotkeyKeyCode
             let matchesFn = !_hotkeyUseFn || event.flags.contains(.maskSecondaryFn)
             let matchesMods = _hotkeyModifiers.isEmpty || event.flags.contains(_hotkeyModifiers)
             let isHotkey = matchesKey && matchesFn && matchesMods

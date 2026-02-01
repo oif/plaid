@@ -82,9 +82,11 @@ struct HotkeyRecorder: View {
     @Binding var keyCode: Int
     @Binding var modifiers: Int
     @Binding var useFn: Bool
+    var allowModifierOnly: Bool = false
     
     @State private var isRecording = false
-    @State private var eventMonitor: Any?
+    @State private var keyMonitor: Any?
+    @State private var flagsMonitor: Any?
     
     var body: some View {
         Button {
@@ -118,7 +120,7 @@ struct HotkeyRecorder: View {
     
     private func startRecording() {
         isRecording = true
-        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             if event.keyCode == 53 {
                 stopRecording()
                 return nil
@@ -138,18 +140,49 @@ struct HotkeyRecorder: View {
             stopRecording()
             return nil
         }
+        
+        if allowModifierOnly {
+            flagsMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { event in
+                let modifierKeyCodes: Set<UInt16> = [63, 58, 61, 59, 62, 55, 54, 56, 60]
+                guard modifierKeyCodes.contains(event.keyCode) else { return event }
+                
+                keyCode = Int(event.keyCode)
+                modifiers = 0
+                useFn = false
+                
+                if event.keyCode == 63 {
+                    useFn = true
+                }
+                
+                stopRecording()
+                return event
+            }
+        }
     }
     
     private func stopRecording() {
         isRecording = false
-        if let monitor = eventMonitor {
+        if let monitor = keyMonitor {
             NSEvent.removeMonitor(monitor)
-            eventMonitor = nil
+            keyMonitor = nil
+        }
+        if let monitor = flagsMonitor {
+            NSEvent.removeMonitor(monitor)
+            flagsMonitor = nil
         }
     }
     
+    private static let modifierKeyNames: [Int: String] = [
+        63: "fn", 58: "⌥", 61: "⌥", 59: "⌃", 62: "⌃",
+        55: "⌘", 54: "⌘", 56: "⇧", 60: "⇧",
+    ]
+    
     private var displayString: String {
         if isRecording { return "Recording..." }
+        
+        if let modName = Self.modifierKeyNames[keyCode], modifiers == 0, !useFn || keyCode == 63 {
+            return modName
+        }
         
         var parts: [String] = []
         
@@ -159,7 +192,9 @@ struct HotkeyRecorder: View {
         if modifiers & (1 << 1) != 0 { parts.append("⇧") }
         if modifiers & (1 << 0) != 0 { parts.append("⌘") }
         
-        parts.append(keyName(for: keyCode))
+        if Self.modifierKeyNames[keyCode] == nil {
+            parts.append(keyName(for: keyCode))
+        }
         
         return parts.joined(separator: " ")
     }

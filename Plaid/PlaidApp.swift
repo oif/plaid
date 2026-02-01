@@ -115,6 +115,12 @@ class AppState: ObservableObject {
         GlobalHotkeyManager.shared.onHotkeyPressed = {
             pillController.toggle()
         }
+        GlobalHotkeyManager.shared.onFnHoldStart = {
+            pillController.holdStart()
+        }
+        GlobalHotkeyManager.shared.onFnHoldEnd = {
+            pillController.holdEnd()
+        }
         GlobalHotkeyManager.shared.start()
     }
     

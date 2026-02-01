@@ -87,6 +87,8 @@ class TranscriptionPillController {
         }
     }
     
+    private var isHoldMode = false
+    
     func show() {
         guard !isShowing else {
             logger.debug("show: already showing")
@@ -110,6 +112,18 @@ class TranscriptionPillController {
         panel.setFrameOrigin(NSPoint(x: x, y: y))
         panel.orderFrontRegardless()
         logger.info("show: pill visible at (\(x), \(y))")
+    }
+    
+    func holdStart() {
+        guard !isShowing else { return }
+        isHoldMode = true
+        show()
+    }
+    
+    func holdEnd() {
+        guard isHoldMode, isShowing else { return }
+        isHoldMode = false
+        pillState.complete()
     }
     
     private func activeScreen() -> NSScreen {

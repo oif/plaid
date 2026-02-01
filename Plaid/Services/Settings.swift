@@ -187,6 +187,27 @@ class AppSettings: ObservableObject {
         }
     }
     
+    @Published var holdKeyCode: Int {
+        didSet {
+            defaults.set(holdKeyCode, forKey: "holdKeyCode")
+            NotificationCenter.default.post(name: .hotkeyDidChange, object: nil)
+        }
+    }
+    
+    @Published var holdModifiers: Int {
+        didSet {
+            defaults.set(holdModifiers, forKey: "holdModifiers")
+            NotificationCenter.default.post(name: .hotkeyDidChange, object: nil)
+        }
+    }
+    
+    @Published var holdUseFn: Bool {
+        didSet {
+            defaults.set(holdUseFn, forKey: "holdUseFn")
+            NotificationCenter.default.post(name: .hotkeyDidChange, object: nil)
+        }
+    }
+    
     // MARK: - Initialization
     
     private init() {
@@ -217,6 +238,10 @@ class AppSettings: ObservableObject {
         self.hotkeyKeyCode = defaults.object(forKey: "hotkeyKeyCode") as? Int ?? spaceKeyCode
         self.hotkeyModifiers = defaults.object(forKey: "hotkeyModifiers") as? Int ?? 0
         self.hotkeyUseFn = defaults.object(forKey: "hotkeyUseFn") as? Bool ?? true
+        let fnKeyCode = 63
+        self.holdKeyCode = defaults.object(forKey: "holdKeyCode") as? Int ?? fnKeyCode
+        self.holdModifiers = defaults.object(forKey: "holdModifiers") as? Int ?? 0
+        self.holdUseFn = defaults.object(forKey: "holdUseFn") as? Bool ?? false
     }
     
     // MARK: - Hotkey Display

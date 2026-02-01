@@ -50,12 +50,22 @@ struct GeneralSettingsView: View {
             
             Section("Hotkey") {
                 HStack {
-                    Text("Transcription Pill")
+                    Text("Toggle Record")
                     Spacer()
                     HotkeyRecorder(
                         keyCode: $settings.hotkeyKeyCode,
                         modifiers: $settings.hotkeyModifiers,
                         useFn: $settings.hotkeyUseFn
+                    )
+                }
+                HStack {
+                    Text("Hold to Record")
+                    Spacer()
+                    HotkeyRecorder(
+                        keyCode: $settings.holdKeyCode,
+                        modifiers: $settings.holdModifiers,
+                        useFn: $settings.holdUseFn,
+                        allowModifierOnly: true
                     )
                 }
             }
