@@ -57,7 +57,7 @@ struct DiagnosticsSettingsView: View {
                         HStack {
                             Text("Key Code")
                             Spacer()
-                            Text("\(AppSettings.shared.holdKeyCode)")
+                            Text("\(AppSettings.shared.hotkeyKeyCode)")
                                 .foregroundStyle(.secondary)
                                 .monospacedDigit()
                         }
@@ -65,11 +65,11 @@ struct DiagnosticsSettingsView: View {
                         HStack {
                             Text("Use Fn Key")
                             Spacer()
-                            Text(AppSettings.shared.holdUseFn || AppSettings.shared.holdKeyCode == 63 ? "Yes" : "No")
+                            Text(AppSettings.shared.hotkeyUseFn ? "Yes" : "No")
                                 .foregroundStyle(.secondary)
                         }
                         
-                        if let fnUsageType = UserDefaults.standard.persistentDomain(forName: "com.apple.HIToolbox")?["AppleFnUsageType"] as? Int, fnUsageType == 3, (AppSettings.shared.holdUseFn || AppSettings.shared.holdKeyCode == 63) {
+                        if let fnUsageType = UserDefaults.standard.persistentDomain(forName: "com.apple.HIToolbox")?["AppleFnUsageType"] as? Int, fnUsageType == 3, AppSettings.shared.hotkeyUseFn {
                             HStack(alignment: .top, spacing: 8) {
                                 Image(systemName: "exclamationmark.triangle.fill")
                                     .foregroundStyle(.orange)

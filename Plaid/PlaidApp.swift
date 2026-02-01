@@ -112,17 +112,14 @@ class AppState: ObservableObject {
         let pillController = TranscriptionPillController.shared
         pillController.configure(textInjector: textInjector)
         
-        GlobalHotkeyManager.shared.onToggleStart = {
-            pillController.startRecording()
+        GlobalHotkeyManager.shared.onHotkeyPressed = {
+            pillController.toggle()
         }
-        GlobalHotkeyManager.shared.onToggleStop = {
-            pillController.stopRecording()
+        GlobalHotkeyManager.shared.onFnHoldStart = {
+            pillController.holdStart()
         }
-        GlobalHotkeyManager.shared.onHoldStart = {
-            pillController.startRecording()
-        }
-        GlobalHotkeyManager.shared.onHoldEnd = {
-            pillController.stopRecording()
+        GlobalHotkeyManager.shared.onFnHoldEnd = {
+            pillController.holdEnd()
         }
         GlobalHotkeyManager.shared.start()
     }

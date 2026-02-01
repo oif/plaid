@@ -166,9 +166,9 @@ final class DiagnosticsManager: ObservableObject {
         Last Error: \(lastEventTapError ?? "none")
         
         === HOTKEY CONFIG ===
-        KeyCode: \(AppSettings.shared.holdKeyCode)
-        Use Fn: \(AppSettings.shared.holdUseFn || AppSettings.shared.holdKeyCode == 63)
-        Modifiers: \(AppSettings.shared.holdModifiers)
+        KeyCode: \(AppSettings.shared.hotkeyKeyCode)
+        Use Fn: \(AppSettings.shared.hotkeyUseFn)
+        Modifiers: \(AppSettings.shared.hotkeyModifiers)
         
         === FN KEY SYSTEM SETTING ===
         """

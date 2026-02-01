@@ -48,9 +48,18 @@ struct GeneralSettingsView: View {
                 }
             }
             
-            Section {
+            Section("Hotkey") {
                 HStack {
-                    Text("Trigger Key")
+                    Text("Toggle Record")
+                    Spacer()
+                    HotkeyRecorder(
+                        keyCode: $settings.hotkeyKeyCode,
+                        modifiers: $settings.hotkeyModifiers,
+                        useFn: $settings.hotkeyUseFn
+                    )
+                }
+                HStack {
+                    Text("Hold to Record")
                     Spacer()
                     HotkeyRecorder(
                         keyCode: $settings.holdKeyCode,
@@ -59,42 +68,6 @@ struct GeneralSettingsView: View {
                         allowModifierOnly: true
                     )
                 }
-            } header: {
-                Text("Gesture Key")
-            }
-            
-            Section {
-                HStack(spacing: 8) {
-                    Image(systemName: "hand.tap")
-                        .frame(width: 20)
-                        .foregroundStyle(.secondary)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Toggle Mode")
-                            .font(.subheadline)
-                        Text("Double-tap to start, tap again to stop")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                
-                HStack(spacing: 8) {
-                    Image(systemName: "hand.point.down")
-                        .frame(width: 20)
-                        .foregroundStyle(.secondary)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Push-to-Talk")
-                            .font(.subheadline)
-                        Text("Hold to record, release to stop")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            } header: {
-                Text("Gestures")
-            } footer: {
-                Text("Both gestures work with the trigger key above.")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
             }
             
             Section("Updates") {
