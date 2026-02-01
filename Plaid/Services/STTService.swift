@@ -457,6 +457,12 @@ class STTService: ObservableObject {
         if let element = context?.focusedElement {
             form.addField(name: "context_element", value: element)
         }
+        if let windowTitle = context?.windowTitle {
+            form.addField(name: "context_window_title", value: windowTitle)
+        }
+        if let appCategory = context?.appCategory {
+            form.addField(name: "context_app_category", value: appCategory)
+        }
         let builtIn = ["Plaid"]
         let vocab = builtIn + settings.customVocabulary.filter { !builtIn.contains($0) }
         if !vocab.isEmpty {

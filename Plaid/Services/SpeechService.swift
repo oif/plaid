@@ -227,11 +227,16 @@ class SpeechService: ObservableObject {
         var userPrompt = settings.customUserPrompt
         var contextParts: [String] = []
         if let appName = context.appName {
-            contextParts.append("当前应用：\(appName)")
+            if let category = context.appCategory {
+                contextParts.append("当前应用：\(appName)（\(category)）")
+            } else {
+                contextParts.append("当前应用：\(appName)")
+            }
         }
-        if let element = context.focusedElement {
-            contextParts.append("输入位置：\(element)")
+        if let title = context.windowTitle {
+            contextParts.append("窗口标题：\(title)")
         }
+
         if contextParts.isEmpty {
             userPrompt = userPrompt.replacingOccurrences(of: "{{context}}", with: "")
         } else {
